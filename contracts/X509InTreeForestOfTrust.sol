@@ -1,8 +1,8 @@
-pragma solidity  ^0.4.19;
+pragma solidity  ^0.4.25;
 pragma experimental ABIEncoderV2;
 
-import "./Asn1Decode.sol";
-import "./Pkcs1Sha256Verify.sol";
+import "asn1-decode/contracts/Asn1Decode.sol";
+import "pkcs1-sha256-verify/contracts/Pkcs1Sha256Verify.sol";
 
 contract X509InTreeForestOfTrust {
   constructor(address decoderAddr, address verifierAddr) {

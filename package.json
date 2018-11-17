@@ -24,7 +24,10 @@
     "url": "https://github.com/JonahGroendal/x509-forest-of-trust/issues"
   },
   "homepage": "https://github.com/JonahGroendal/x509-forest-of-trust#readme",
-  "dependencies": {},
+  "dependencies": {
+    "asn1-decode": "git+ssh://git@github.com/JonahGroendal/asn1-decode.git",
+    "pkcs1-sha256-verify": "git+ssh://git@github.com/JonahGroendal/pkcs1-sha256-verify.git"
+  },
   "devDependencies": {
     "node-rsa": "^1.0.1",
     "truffle": "^5.0.0-beta.1",
