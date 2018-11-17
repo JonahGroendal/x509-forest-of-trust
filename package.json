@@ -1,0 +1,33 @@
+{
+  "name": "x509-forest-of-trust",
+  "version": "1.0.0",
+  "description": "Solidity contract for storing X509 certificate chains in parent pointer trees on ETH blockchain",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "truffle test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JonahGroendal/x509-forest-of-trust.git"
+  },
+  "keywords": [
+    "Solidity",
+    "x509",
+    "cert",
+    "certificate"
+  ],
+  "author": "Jonah Groendal",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/JonahGroendal/x509-forest-of-trust/issues"
+  },
+  "homepage": "https://github.com/JonahGroendal/x509-forest-of-trust#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "node-rsa": "^1.0.1",
+    "truffle": "^5.0.0-beta.1",
+    "web3": "^1.0.0-beta.36"
+  }
+}
