@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "node-rsa": "^1.0.1",
-    "truffle": "^5.0.0-beta.1",
+    "truffle": "^5.0.0-user-level-mnemonic.0",
     "web3": "^1.0.0-beta.36"
   }
 }
