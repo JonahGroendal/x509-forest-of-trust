@@ -1,34 +1,36 @@
 pragma solidity  ^0.4.25;
-pragma experimental ABIEncoderV2;
 
 import "asn1-decode/contracts/Asn1Decode.sol";
-import "pkcs1-sha256-verify/contracts/Pkcs1Sha256Verify.sol";
+import "sig-verify-algs/contracts/Algorithm.sol";
 
 contract X509InTreeForestOfTrust {
-  constructor(address decoderAddr, address verifierAddr) {
-    decoder = Asn1Decode(decoderAddr);
-    verifier = Pkcs1Sha256Verify(verifierAddr);
-  }
-
-  Asn1Decode decoder;
-  Pkcs1Sha256Verify verifier;
+  using Asn1Decode for uint;
 
   struct Certificate {
+    address verifiedBy;
     address owner;
     bytes32 ens;
     bytes32 revokedBy;
     bytes32 parent;
+    bytes pubKey;
     bytes tbsCertificate;
     bytes signature;
     uint validNotBefore;
     uint validNotAfter;
+    bool canSignHttpExchanges;
   }
-  mapping (bytes32 => Certificate) private certificates;
-  mapping (bytes32 => bytes32[]) private certificateIdsReference;
-  bytes32[] private serialNumbers;
+  mapping (bytes32 => Certificate) private certs;
+  mapping (bytes32 => bytes32[]) private certIds;
 
-  event certificateAdded(bytes32 certificateId);
-  event certificateClaimed(bytes32 certificateId);
+  event CertificateAdded(bytes32 certId, bytes32 sn);
+  event CertificateClaimed(bytes32 certId);
+
+  bytes constant public COMMON_NAME = "\x55\x04\x03";
+  // shortcuts to commonly used X509 nodes
+  bytes constant public LOCATION_SERIAL_NUMBER = '\x00\x02\x01';
+  bytes constant public LOCATION_PUB_KEY = '\x00\x02\x06';
+  bytes constant public LOCATION_VALID_NOT_BEFORE = '\x00\x02\x04\x01';
+  bytes constant public LOCATION_VALID_NOT_AFTER = '\x00\x02\x04\x01\x01';
 
 
   /* TODO add function to set certificate
@@ -38,11 +40,11 @@ contract X509InTreeForestOfTrust {
    * validNotBefore and validNotAfter and initialize the certificate with those
    * values too!! (shouldn't take much work).
    *
-   * Adds a X509 certificate to the certificates mapping, which is indexed on
-   * certificateId (the keccak256 hash of its public key). Anyone can call this
+   * Adds a X509 certificate to the certs mapping, which is indexed on
+   * certId (the keccak256 hash of its public key). Anyone can call this
    * method so long as they have the funds to cover the transaction. The
    * certificate must be signed and valid (but not nessisarily by any existing
-   * certificates in the mapping). Certificates may be self-signed. The idea is
+   * certs in the mapping). Certificates may be self-signed. The idea is
    * to pulicise a verified chain of trust on the blockchain that can be
    * referenced by other contracts.
    *
@@ -53,187 +55,121 @@ contract X509InTreeForestOfTrust {
    * @param signersPubKey The DER-encoded node of the public key used to sign
    *        the signature param.
    */
-  function addCertificate(bytes tbsCertificate, bytes signature, bytes signersPubKey) public returns (bool){
-    bytes32 certificateId;
+  function addCertificate(bytes tbsCertificate, bytes signature, bytes signersPubKey, address verifier) public returns (bool){
+    bytes32 certId;
     bytes32 serialNumber;
-    string memory commonName;
-    bytes memory modulus;
-    bytes memory exponent;
-    Asn1Decode.NodePtr memory i;
-    Asn1Decode.NodePtr memory j;
-    Asn1Decode.NodePtr memory k;
-
-    // Extract modulus and exponent from signersPubKey
-    (modulus, exponent) = extractRsaPubKeyComponents(signersPubKey);
+    bytes memory commonName;
+    uint node1;
+    uint node2;
+    uint node3;
 
     // Verify signature
-    require( verifier.verify(sha256(tbsCertificate), signature, exponent, modulus) == 0 );
+    require( Algorithm(verifier).verify(signersPubKey, tbsCertificate, signature) );
 
     // Extract serial number from tbsCertificate
-    i = decoder.nodeTraverse(tbsCertificate, decoder.LOCATION_SERIAL_NUMBER());
-    serialNumber = bytes32(decoder.decodeUint(decoder.getValue(tbsCertificate, i)));
+    node1 = Asn1Decode.traverse(tbsCertificate, LOCATION_SERIAL_NUMBER);
+    serialNumber = bytes32(Asn1Decode.decodeUint(node1.getValue(tbsCertificate)));
 
-    i = decoder.nodeNext(tbsCertificate, i);
-    i = decoder.nodeNext(tbsCertificate, i);
-    i = decoder.nodeNext(tbsCertificate, i);
-    j = decoder.nodeFirstChild(tbsCertificate, i);
+    node1 = node1.next(tbsCertificate);
+    node1 = node1.next(tbsCertificate);
+    node1 = node1.next(tbsCertificate);
+    node2 = node1.firstChild(tbsCertificate);
     // get validNotBefore
-    j = decoder.nodeNext(tbsCertificate, j);
+    node2 = node2.next(tbsCertificate);
     // get validNotAfter
 
-    i = decoder.nodeNext(tbsCertificate, i);
-    j = decoder.nodeFirstChild(tbsCertificate, i);
-    while (decoder.nodeIsChildOf(j, i)) {
-      k = decoder.nodeFirstChild(tbsCertificate, j);
-      k = decoder.nodeFirstChild(tbsCertificate, k);
-      if ( keccak256(decoder.getValue(tbsCertificate, k)) == keccak256(decoder.COMMON_NAME()) ) {
-        k = decoder.nodeNext(tbsCertificate, k);
-        commonName = string(decoder.getValue(tbsCertificate, k)); // Make sure this translates from bytes to string correctly
+    node1 = node1.next(tbsCertificate);
+    node2 = node1.firstChild(tbsCertificate);
+    while (node2.isChildOf(node1)) {
+      node3 = node2.firstChild(tbsCertificate);
+      node3 = node3.firstChild(tbsCertificate);
+      if ( keccak256(node3.getValue(tbsCertificate)) == keccak256(COMMON_NAME) ) {
+        node3 = node3.next(tbsCertificate);
+        commonName = node3.getValue(tbsCertificate); // Make sure this translates from bytes to string correctly
         break;
       }
-      j = decoder.nodeNext(tbsCertificate, j);
+      node2 = node2.next(tbsCertificate);
     }
 
-    i = decoder.nodeNext(tbsCertificate, i);
-    // Extract public key and calculate certificateId from it
-    certificateId = keccak256(decoder.getAll(tbsCertificate, i));
+    node1 = node1.next(tbsCertificate);
+    // Extract public key and calculate certId from it
+    certId = keccak256(node1.getAll(tbsCertificate));
 
-    // Revoked certificates may not be written over
-    require( certificates[certificateId].revokedBy == 0 );
+    // Revoked certs may not be written over
+    require( certs[certId].revokedBy == 0 );
 
-    // Add certificate to certificates mapping
-    certificates[certificateId].parent = keccak256(signersPubKey);
-    certificates[certificateId].tbsCertificate = tbsCertificate;
-    certificates[certificateId].signature = signature;
+    // Add certificate to certs mapping
+    certs[certId].pubKey = node1.getAll(tbsCertificate);
+    certs[certId].verifiedBy = verifier;
+    certs[certId].parent = keccak256(signersPubKey);
 
-    // Add serial number to serialNumbers array and certificateIdsReference mapping
-    serialNumbers.push(serialNumber);
-    certificateIdsReference[keccak256(serialNumber)].push(certificateId);
+    // Add common name to certIds mapping
+    certIds[keccak256(commonName)].push(certId);
 
     // Fire event
-    certificateAdded(certificateId);
+    emit CertificateAdded(certId, serialNumber);
   }
 
   /*
-   * Adds a reference to certificateIdsReference mapping. Reference must go to a
-   * certificateId of an existing certificate. The reference (the key) is from
-   * the keccak256 hash of the node at keyLocation of certificates[certificateId]
-   * to certificateId.
+   * Adds a reference to certIds mapping. Reference must go to a
+   * certId of an existing certificate. The reference (the key) is from
+   * the keccak256 hash of the node at keyLocation of certs[certId]
+   * to certId.
    *
-   * @param certifiacateId The certificateId to which we are adding a reference.
-   *        (must be the certificateId of a certificate in certificates mapping)
+   * @param certifiacateId The certId to which we are adding a reference.
+   *        (must be the certId of a certificate in certs mapping)
    * @param keyLocation The traversal instructions for the desired node from which
    *        the reference key is derived. Same encoding as "location" param in
-   *        nodeTraverse() function.
+   *        traverse() function.
    */
-  function addReference(bytes32 certificateId, bytes keyLocation) public {
-    Asn1Decode.NodePtr memory i;
+  /* function addReference(bytes32 certId, bytes keyLocation) public {
+    uint node;
     bytes memory v;
 
-    i = decoder.nodeTraverse(certificates[certificateId].tbsCertificate, keyLocation);
-    v = decoder.getValue(certificates[certificateId].tbsCertificate, i);
-    certificateIdsReference[keccak256(v)].push(certificateId);
-  }
+    node = Asn1Decode.traverse(certs[certId].tbsCertificate, keyLocation);
+    v = node.getValue(certs[certId].tbsCertificate);
+    certIds[keccak256(v)].push(certId);
+  } */
 
   /**
    * The return values of this function are used to proveOwnership() of a
-   * certificate that exists in the certificates mapping.
+   * certificate that exists in the certs mapping.
 
    * @return A unique keccak256 hash to be signed
    * @return The block number used in the hash
    */
-  function signThis() public view returns (bytes32, uint) {
-    return ( keccak256(msg.sender, block.blockhash(block.number - 1)), block.number -1 );
+  function signThis() external view returns (bytes32, uint) {
+    return ( keccak256(abi.encodePacked(msg.sender, blockhash(block.number - 1))), block.number -1 );
   }
 
   /**
    * An eth account calls this method to prove ownership of a certificate in
-   * certificates mapping. If successful, certificates[certificateId].owner will
+   * certs mapping. If successful, certs[certId].owner will
    * be set to the caller's address. To change owner of a cert, this method must
    *  be called from the new desired owner address.
    *
-   * @param certificateId The keccak256 hash of target certificate's public key
-   * @param signature The PKS1 RSA signature of the first return value of signThis()
+   * @param certId The keccak256 hash of target certificate's public key
+   * @param signature The RSA signature of the first return value of signThis()
    * @param blockNumber The second return value of signThis() (must be >= block.number - 5760)
    */
-  function proveOwnership(bytes32 certificateId, bytes signature, uint blockNumber) external returns (bool){
-    bytes32 message;
-    bytes memory pubKey;
-    bytes memory modulus;
-    bytes memory exponent;
-    Asn1Decode.NodePtr memory i;
+  function proveOwnership(bytes32 certId, bytes signature, uint blockNumber) external returns (bool){
+    bytes memory message;
 
     // Only accept proof if it's less than about one day old (at 15sec/block)
     require( block.number - blockNumber <= 5760 );
 
     // Verify signature, which proves ownership
-    message = keccak256(msg.sender, block.blockhash(blockNumber));
-    i = decoder.nodeTraverse(certificates[certificateId].tbsCertificate, decoder.LOCATION_PUB_KEY());
-    pubKey = decoder.getAll(certificates[certificateId].tbsCertificate, i);
-    (modulus, exponent) = extractRsaPubKeyComponents(pubKey);
-    require( verifier.verify(sha256(message), signature, exponent, modulus) == 0 );
+    message = abi.encodePacked(keccak256(abi.encodePacked(msg.sender, blockhash(blockNumber))));
+    require( Algorithm(certs[certId].verifiedBy).verify(certs[certId].pubKey, message, signature) );
 
-    certificates[certificateId].owner = msg.sender;
+    certs[certId].owner = msg.sender;
 
-    certificateClaimed(certificateId);
-  }
-
-  /**
-   * Extracts modulus and exponent (respectively) from a DER-encoded RSA public key
-   *
-   * Helper function
-   */
-  function extractRsaPubKeyComponents(bytes key) private view returns (bytes, bytes) {
-    bytes memory modulus;
-    bytes memory exponent;
-    bytes memory encodedModulus;
-    bytes memory encodedExponent;
-    bytes memory encodedBytes;
-    Asn1Decode.NodePtr memory i;
-
-    i = decoder.nodeRoot(key);
-    i = decoder.nodeFirstChild(key, i);
-    i = decoder.nodeNext(key, i);
-    // Decode bitstring
-    encodedBytes = decoder.getValue(key, i);
-    for (uint j=0; j<encodedBytes.length-1; j++) {
-      encodedBytes[j] = encodedBytes[j+1];
-    }
-    i = decoder.nodeRoot(encodedBytes);
-    i = decoder.nodeFirstChild(encodedBytes, i);
-    encodedModulus = decoder.getValue(encodedBytes, i);
-    // modulus must be positive
-    require( encodedModulus[0] & 0x80 == 0 );
-    // remove leading zero byte from der encoding of modulus if present
-    if (encodedModulus[0] == 0) {
-       modulus = new bytes(encodedModulus.length - 1);
-       for (uint index=0; index<modulus.length; index++) {
-           modulus[index] = encodedModulus[index+1];
-       }
-    } else {
-       modulus = encodedModulus;
-    }
-    i = decoder.nodeNext(encodedBytes, i);
-    encodedExponent = decoder.getValue(encodedBytes, i);
-    // exponent must be positive
-    require( encodedExponent[0] & 0x80 == 0 );
-    // remove leading zero byte from der encoding of exponent if present
-    if (encodedExponent[0] == 0) {
-       exponent = new bytes(encodedExponent.length - 1);
-       for (index=0; index<exponent.length; index++) {
-           exponent[index] = encodedExponent[index+1];
-       }
-    } else {
-       exponent = encodedExponent;
-    }
-
-    return (modulus, exponent);
+    emit CertificateClaimed(certId);
   }
 
   function ensNameHash(bytes memory name) private pure returns (bytes32) {
     bytes memory prefix;
     bytes memory rest;
-    bytes32 zeroBytes;
     uint8 i;
     uint8 j;
 
@@ -261,7 +197,7 @@ contract X509InTreeForestOfTrust {
       }
     }
 
-    return keccak256(ensNameHash(rest), keccak256(prefix));
+    return keccak256(abi.encodePacked(ensNameHash(rest), keccak256(prefix)));
   }
 
   /* not finished, hasnt been tested at all. most likely does not work in current state
@@ -310,16 +246,16 @@ contract X509InTreeForestOfTrust {
 
   }
   */
-  function certificate(bytes32 certificateId) public view returns (Certificate) {
-    return certificates[certificateId];
-  }
+  /* function certificate(bytes32 certId) public view returns (Certificate) {
+    return certs[certId];
+  } */
 
   // For testing. Also, make sure the new web3 can handle structs (unlike the old)
-  function tbsCertificate(bytes32 certificateId) public view returns (bytes) {
-    return certificates[certificateId].tbsCertificate;
+  function tbsCertificate(bytes32 certId) public view returns (bytes) {
+    return certs[certId].tbsCertificate;
   }
 
-  function certificateId(bytes32 referenceHash) public view returns (bytes32[]) {
-    return certificateIdsReference[referenceHash];
+  function certId(bytes32 referenceHash) public view returns (bytes32[]) {
+    return certIds[referenceHash];
   }
 }
