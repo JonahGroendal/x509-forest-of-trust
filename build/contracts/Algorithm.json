@@ -39,14 +39,14 @@
     "absolutePath": "sig-verify-algs/contracts/Algorithm.sol",
     "exportedSymbols": {
       "Algorithm": [
-        1249
+        3989
       ]
     },
-    "id": 1250,
+    "id": 3990,
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 1237,
+        "id": 3977,
         "literals": [
           "solidity",
           "^",
@@ -54,7 +54,7 @@
           ".24"
         ],
         "nodeType": "PragmaDirective",
-        "src": "0:24:3"
+        "src": "0:24:7"
       },
       {
         "baseContracts": [],
@@ -62,9 +62,9 @@
         "contractKind": "interface",
         "documentation": null,
         "fullyImplemented": false,
-        "id": 1249,
+        "id": 3989,
         "linearizedBaseContracts": [
-          1249
+          3989
         ],
         "name": "Algorithm",
         "nodeType": "ContractDefinition",
@@ -72,7 +72,7 @@
           {
             "body": null,
             "documentation": "@dev Verifies a signature.\n@param data The data that's is signed.\n@param sig The signature.\n@param key The signers pub key\n@return True iff the signature is valid.",
-            "id": 1248,
+            "id": 3988,
             "implemented": false,
             "isConstructor": false,
             "isDeclaredConst": true,
@@ -80,16 +80,16 @@
             "name": "verify",
             "nodeType": "FunctionDefinition",
             "parameters": {
-              "id": 1244,
+              "id": 3984,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 1239,
+                  "id": 3979,
                   "name": "key",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1248,
-                  "src": "277:9:3",
+                  "scope": 3988,
+                  "src": "277:9:7",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -97,10 +97,10 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 1238,
+                    "id": 3978,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
-                    "src": "277:5:3",
+                    "src": "277:5:7",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bytes_storage_ptr",
                       "typeString": "bytes"
@@ -111,11 +111,11 @@
                 },
                 {
                   "constant": false,
-                  "id": 1241,
+                  "id": 3981,
                   "name": "data",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1248,
-                  "src": "288:10:3",
+                  "scope": 3988,
+                  "src": "288:10:7",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -123,10 +123,10 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 1240,
+                    "id": 3980,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
-                    "src": "288:5:3",
+                    "src": "288:5:7",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bytes_storage_ptr",
                       "typeString": "bytes"
@@ -137,11 +137,11 @@
                 },
                 {
                   "constant": false,
-                  "id": 1243,
+                  "id": 3983,
                   "name": "sig",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1248,
-                  "src": "300:9:3",
+                  "scope": 3988,
+                  "src": "300:9:7",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -149,10 +149,10 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 1242,
+                    "id": 3982,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
-                    "src": "300:5:3",
+                    "src": "300:5:7",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bytes_storage_ptr",
                       "typeString": "bytes"
@@ -162,20 +162,20 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "276:34:3"
+              "src": "276:34:7"
             },
             "payable": false,
             "returnParameters": {
-              "id": 1247,
+              "id": 3987,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 1246,
+                  "id": 3986,
                   "name": "",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1248,
-                  "src": "334:4:3",
+                  "scope": 3988,
+                  "src": "334:4:7",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -183,10 +183,10 @@
                     "typeString": "bool"
                   },
                   "typeName": {
-                    "id": 1245,
+                    "id": 3985,
                     "name": "bool",
                     "nodeType": "ElementaryTypeName",
-                    "src": "334:4:3",
+                    "src": "334:4:7",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bool",
                       "typeString": "bool"
@@ -196,33 +196,33 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "333:6:3"
+              "src": "333:6:7"
             },
-            "scope": 1249,
-            "src": "261:79:3",
+            "scope": 3989,
+            "src": "261:79:7",
             "stateMutability": "view",
             "superFunction": null,
             "visibility": "external"
           }
         ],
-        "scope": 1250,
-        "src": "26:316:3"
+        "scope": 3990,
+        "src": "26:316:7"
       }
     ],
-    "src": "0:343:3"
+    "src": "0:343:7"
   },
   "legacyAST": {
     "absolutePath": "sig-verify-algs/contracts/Algorithm.sol",
     "exportedSymbols": {
       "Algorithm": [
-        1249
+        3989
       ]
     },
-    "id": 1250,
+    "id": 3990,
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 1237,
+        "id": 3977,
         "literals": [
           "solidity",
           "^",
@@ -230,7 +230,7 @@
           ".24"
         ],
         "nodeType": "PragmaDirective",
-        "src": "0:24:3"
+        "src": "0:24:7"
       },
       {
         "baseContracts": [],
@@ -238,9 +238,9 @@
         "contractKind": "interface",
         "documentation": null,
         "fullyImplemented": false,
-        "id": 1249,
+        "id": 3989,
         "linearizedBaseContracts": [
-          1249
+          3989
         ],
         "name": "Algorithm",
         "nodeType": "ContractDefinition",
@@ -248,7 +248,7 @@
           {
             "body": null,
             "documentation": "@dev Verifies a signature.\n@param data The data that's is signed.\n@param sig The signature.\n@param key The signers pub key\n@return True iff the signature is valid.",
-            "id": 1248,
+            "id": 3988,
             "implemented": false,
             "isConstructor": false,
             "isDeclaredConst": true,
@@ -256,16 +256,16 @@
             "name": "verify",
             "nodeType": "FunctionDefinition",
             "parameters": {
-              "id": 1244,
+              "id": 3984,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 1239,
+                  "id": 3979,
                   "name": "key",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1248,
-                  "src": "277:9:3",
+                  "scope": 3988,
+                  "src": "277:9:7",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -273,10 +273,10 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 1238,
+                    "id": 3978,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
-                    "src": "277:5:3",
+                    "src": "277:5:7",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bytes_storage_ptr",
                       "typeString": "bytes"
@@ -287,11 +287,11 @@
                 },
                 {
                   "constant": false,
-                  "id": 1241,
+                  "id": 3981,
                   "name": "data",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1248,
-                  "src": "288:10:3",
+                  "scope": 3988,
+                  "src": "288:10:7",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -299,10 +299,10 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 1240,
+                    "id": 3980,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
-                    "src": "288:5:3",
+                    "src": "288:5:7",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bytes_storage_ptr",
                       "typeString": "bytes"
@@ -313,11 +313,11 @@
                 },
                 {
                   "constant": false,
-                  "id": 1243,
+                  "id": 3983,
                   "name": "sig",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1248,
-                  "src": "300:9:3",
+                  "scope": 3988,
+                  "src": "300:9:7",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -325,10 +325,10 @@
                     "typeString": "bytes"
                   },
                   "typeName": {
-                    "id": 1242,
+                    "id": 3982,
                     "name": "bytes",
                     "nodeType": "ElementaryTypeName",
-                    "src": "300:5:3",
+                    "src": "300:5:7",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bytes_storage_ptr",
                       "typeString": "bytes"
@@ -338,20 +338,20 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "276:34:3"
+              "src": "276:34:7"
             },
             "payable": false,
             "returnParameters": {
-              "id": 1247,
+              "id": 3987,
               "nodeType": "ParameterList",
               "parameters": [
                 {
                   "constant": false,
-                  "id": 1246,
+                  "id": 3986,
                   "name": "",
                   "nodeType": "VariableDeclaration",
-                  "scope": 1248,
-                  "src": "334:4:3",
+                  "scope": 3988,
+                  "src": "334:4:7",
                   "stateVariable": false,
                   "storageLocation": "default",
                   "typeDescriptions": {
@@ -359,10 +359,10 @@
                     "typeString": "bool"
                   },
                   "typeName": {
-                    "id": 1245,
+                    "id": 3985,
                     "name": "bool",
                     "nodeType": "ElementaryTypeName",
-                    "src": "334:4:3",
+                    "src": "334:4:7",
                     "typeDescriptions": {
                       "typeIdentifier": "t_bool",
                       "typeString": "bool"
@@ -372,20 +372,20 @@
                   "visibility": "internal"
                 }
               ],
-              "src": "333:6:3"
+              "src": "333:6:7"
             },
-            "scope": 1249,
-            "src": "261:79:3",
+            "scope": 3989,
+            "src": "261:79:7",
             "stateMutability": "view",
             "superFunction": null,
             "visibility": "external"
           }
         ],
-        "scope": 1250,
-        "src": "26:316:3"
+        "scope": 3990,
+        "src": "26:316:7"
       }
     ],
-    "src": "0:343:3"
+    "src": "0:343:7"
   },
   "compiler": {
     "name": "solc",
@@ -393,5 +393,5 @@
   },
   "networks": {},
   "schemaVersion": "3.0.0-beta.1",
-  "updatedAt": "2018-11-21T23:57:37.972Z"
+  "updatedAt": "2018-11-25T22:46:41.956Z"
 }

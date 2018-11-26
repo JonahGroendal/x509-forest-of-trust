@@ -10,8 +10,12 @@ import hashlib
 
 m = hashlib.sha256()
 
-with open('self-signedCert.der') as f:
+with open('cert.der', 'rb') as f:
     der = f.read()
+
+cert = "0x" + der.encode("hex")
+m.update(der)
+fingerprint = "0x" + m.hexdigest()
 
 i = asn1_node_root(der)
 i = asn1_node_first_child(der,i)
@@ -42,12 +46,10 @@ j = asn1_node_first_child(der, i)
 j = asn1_node_next(der, j)
 j = asn1_node_next(der, j)
 j = asn1_node_next(der, j)
-j = asn1_node_next(der, j)
-j = asn1_node_next(der, j)
 j = asn1_node_first_child(der, j)
 j = asn1_node_first_child(der, j)
 j = asn1_node_next(der, j)
-common_name = asn1_get_value(der, j);
+common_name = asn1_get_value(der, j)
 
 i = asn1_node_next(der, i)
 i = asn1_node_next(der, i)
@@ -58,6 +60,8 @@ expected_pub_key = "0x" + expected_pub_key.encode("hex")
 
 with open('cert.json', 'w+') as f:
     f.write('{\n')
+    f.write('   "cert": "' + cert + '",\n')
+    f.write('   "fingerprint": "' + fingerprint + '",\n')
     f.write('   "tbsCertificate": "' + message + '",\n')
     f.write('   "signature": "' + signature + '",\n')
     f.write('   "expectedPubKey": "' + expected_pub_key + '",\n')
