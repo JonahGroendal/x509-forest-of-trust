@@ -1,12 +1,15 @@
 pragma solidity  ^0.4.25;
 
 import "asn1-decode/contracts/Asn1Decode.sol";
+import "./Ownable.sol";
+import "@ensdomains/dnssec-oracle/contracts/BytesUtils.sol";
 import "sig-verify-algs/contracts/Algorithm.sol";
 import "ens-solidity-namehash/contracts/NameHash.sol";
 import "ethereum-datetime/contracts/DateTime.sol";
 
-contract X509InTreeForestOfTrust {
+contract X509InTreeForestOfTrust is Ownable {
   using Asn1Decode for bytes;
+  using BytesUtils for bytes;
   using NameHash for string;
 
   constructor(address sha256WithRSAEncryption, address _dateTime) public {
@@ -25,15 +28,38 @@ contract X509InTreeForestOfTrust {
     uint validNotAfter;
     bool canSignHttpExchanges;
   }
+  // certId => cert
   mapping (bytes32 => Certificate) public certs;
-  mapping (bytes32 => bytes32) public certIds;
-  mapping (bytes32 => bytes32[]) public certIdsLists;
+  // keccak256(commonName) => certId
+  mapping (bytes32 => bytes32[]) public certIdsFromCN;
+  // sha256Fingerprint => certId or ensNamehash(commonName) => keccak256(commonName)
+  mapping (bytes32 => bytes32) public refs;
+
   mapping(bytes32 => Algorithm) private algs;
   bytes32 private cshxOidHash;
 
-  event CertificateAdded(bytes32 certId);
-  event CertificateClaimed(bytes32 certId);
+  event CertAdded(bytes32 certId);
+  event CertClaimed(bytes32 certId);
 
+  function addRootCert(bytes memory cert, bool canSignHttpExchanges)
+  public returns (bool)
+  {
+    uint node;
+    // Get pub key
+    node = cert.root();
+    node = cert.firstChildOf(node);
+    node = cert.firstChildOf(node);
+    node = cert.firstChildOf(node);
+    node = cert.nextSiblingOf(node);
+    node = cert.nextSiblingOf(node);
+    node = cert.nextSiblingOf(node);
+    node = cert.nextSiblingOf(node);
+    node = cert.nextSiblingOf(node);
+    node = cert.nextSiblingOf(node);
+    // Set parent/self pub key
+    certs[keccak256(cert.allBytesAt(node))].pubKey = cert.allBytesAt(node);
+    return addCert(cert, keccak256(cert.allBytesAt(node)), canSignHttpExchanges);
+  }
 
   /* TODO add function to set certificate
   function rovokeCertificate(bytes certificateRevocation, bytes signature, bytes32 authorityCertificateId)
@@ -57,7 +83,7 @@ contract X509InTreeForestOfTrust {
    * @param signersPubKey The DER-encoded node of the public key used to sign
    *        the signature param.
    */
-  function addCertificate(bytes cert, bytes signersPubKey, bool canSignHttpExchanges)
+  function addCert(bytes memory cert, bytes32 parentId, bool canSignHttpExchanges)
   public returns (bool)
   {
     bytes32 certId;
@@ -80,7 +106,7 @@ contract X509InTreeForestOfTrust {
     node3 = cert.nextSiblingOf(node1);
     node3 = cert.nextSiblingOf(node3);
     // Verify signature
-    require( algs[keccak256(cert.bytesAt(node2))].verify(signersPubKey, cert.allBytesAt(node1), cert.bytesAt(node3)), "Signature doesnt match");
+    require( algs[keccak256(cert.bytesAt(node2))].verify(certs[parentId].pubKey, cert.allBytesAt(node1), cert.bytesAt(node3)), "Signature doesnt match");
 
     node1 = cert.firstChildOf(node1);
     node1 = cert.firstChildOf(node1);
@@ -89,6 +115,7 @@ contract X509InTreeForestOfTrust {
     node1 = cert.nextSiblingOf(node1);
     node1 = cert.nextSiblingOf(node1);
 
+    // Get timestamps
     node2 = cert.firstChildOf(node1);
     require(toTimestamp(cert.bytesAt(node2)) <= now, "Invalid cert");
     node2 = cert.nextSiblingOf(node2);
@@ -97,33 +124,34 @@ contract X509InTreeForestOfTrust {
 
     node1 = cert.nextSiblingOf(node1);
     node2 = cert.nextSiblingOf(node1);
-    // Extract public key and calculate certId from it
+    // Get public key and calculate certId from it
     certId = keccak256(cert.allBytesAt(node2));
+    if (certId != parentId)
+      certs[certId].pubKey = cert.allBytesAt(node2);
 
+    // Get commonName and add references from it
     node2 = cert.firstChildOf(node1);
     while (Asn1Decode.isChildOf(node2, node1)) {
       node3 = cert.firstChildOf(node2);
       node3 = cert.firstChildOf(node3);
       if ( keccak256(cert.bytesAt(node3)) == keccak256("\x55\x04\x03") ) {
         node3 = cert.nextSiblingOf(node3);
-        certIdsLists[string(cert.bytesAt(node3)).namehash()].push(certId);
+        certIdsFromCN[keccak256(cert.bytesAt(node3))].push(certId);
+        refs[toEnsNamehash(cert.bytesAt(node3))] = keccak256(cert.bytesAt(node3));
         break;
       }
       node2 = cert.nextSiblingOf(node2);
     }
 
-    node1 = cert.nextSiblingOf(node1);
-
-    // Add certificate to certs mapping
-    certs[certId].pubKey = cert.allBytesAt(node1);
-    certs[certId].parentCert = keccak256(signersPubKey);
+    certs[certId].parentCert = parentId;
     certs[certId].serialNumber = serialNumber;
     certs[certId].validNotAfter = validNotAfter;
 
     // Add reference from sha256 fingerprint
-    certIds[sha256(cert)] = certId;
+    refs[sha256(cert)] = certId;
 
     if (canSignHttpExchanges) {
+      node1 = cert.nextSiblingOf(node1);
       node1 = cert.nextSiblingOf(node1);
       node1 = cert.firstChildOf(node1);
       node2 = cert.firstChildOf(node1);
@@ -138,7 +166,7 @@ contract X509InTreeForestOfTrust {
     }
 
     // Fire event
-    emit CertificateAdded(certId);
+    emit CertAdded(certId);
   }
 
   /*
@@ -197,10 +225,10 @@ contract X509InTreeForestOfTrust {
 
     certs[certId].owner = msg.sender;
 
-    emit CertificateClaimed(certId);
+    emit CertClaimed(certId);
   }
 
-  function toTimestamp(bytes x509Time)
+  function toTimestamp(bytes memory x509Time)
   private view returns (uint)
   {
     uint16 yrs;  uint8 mnths;
@@ -224,6 +252,29 @@ contract X509InTreeForestOfTrust {
     secs += (uint8(x509Time[offset+10])-48)*10 + uint8(x509Time[offset+11])-48;
 
     return dateTime.toTimestamp(yrs, mnths, dys, hrs, mins, secs);
+  }
+
+  function toEnsNamehash(bytes memory dn)
+  private view returns (bytes32)
+  {
+    // if common name starts with 'www.'
+    if (dn[0] == 0x77 && dn[1] == 0x77 && dn[2] == 0x77 && dn[3] == 0x2e)
+      // omit 'www.'
+      return string(dn.substring(4, dn.length-4)).namehash();
+
+    return string(dn).namehash();
+  }
+
+  function setAlgs(bytes32 oidHash, address alg)
+  public onlyOwner
+  {
+    algs[oidHash] = Algorithm(alg);
+  }
+
+  function setCshxOidHash(bytes32 _cshxOidHash)
+  public onlyOwner
+  {
+    cshxOidHash = _cshxOidHash;
   }
 
   /* function owner(bytes32 certId) public view returns (address) {
