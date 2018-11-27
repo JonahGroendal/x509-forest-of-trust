@@ -27,7 +27,7 @@ contract('X509InTreeForestOfTrust', (accounts) => {
     assert.equal(actualCert.parentId, expectedCertId, "cert not added");
     assert.equal(actualCert.pubKey, parsedCert.expectedPubKey, "cert not added");
     assert.equal(actualCert.serialNumber, parseInt(parsedCert.expectedSerialNumber), "cert not added");
-    assert.isTrue(actualCert.canSignHttpExchanges, "failed to find canSignHttpExchanges extension");
+    assert.isTrue(actualCert.cshx, "failed to find canSignHttpExchanges extension");
     assert.equal(actualCertId, expectedCertId, "common name doesn't map to certId");
     assert.equal(actualCertId2, expectedCertId, "fingerprint doesn't map to certId");
     assert.equal(actualCertId3, expectedCertId, "ens namehash doesn't map to certId");
