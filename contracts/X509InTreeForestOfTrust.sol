@@ -31,7 +31,7 @@ contract X509InTreeForestOfTrust is Ownable {
     bytes pubKey;
     uint serialNumber;
     uint validNotAfter;
-    bool canSignHttpExchanges;
+    bool cshx; // canSignHttpExchanges
   }
   // certId => cert ; certId == keccak256(cert.pubKey)
   mapping (bytes32 => Certificate) public certs;
@@ -51,9 +51,9 @@ contract X509InTreeForestOfTrust is Ownable {
   /*
    * @dev Add a self-signed X.509 certificate to the root of a new tree
    * @param cert A DER-encoded self-signed X.509 certificate
-   * @param canSignHttpExchanges Look for CSHX extension
+   * @param cshx Look for canSignHttpExchanges extension
    */
-  function addRootCert(bytes memory cert, bool canSignHttpExchanges)
+  function addRootCert(bytes memory cert, bool cshx)
   public
   {
     uint node;
@@ -69,16 +69,16 @@ contract X509InTreeForestOfTrust is Ownable {
     node = cert.nextSiblingOf(node);
     // Set parent/self pub key
     certs[cert.keccakOfAllBytesAt(node)].pubKey = cert.allBytesAt(node);
-    addCert(cert, cert.keccakOfAllBytesAt(node), canSignHttpExchanges);
+    addCert(cert, cert.keccakOfAllBytesAt(node), cshx);
   }
 
   /*
    * @dev Add a X.509 certificate to an existing tree/chain
    * @param cert A DER-encoded X.509 certificate
    * @param parentId The keccak256 hash of parent cert's public key
-   * @param canSignHttpExchanges Look for CSHX extension
+   * @param cshx Look for canSignHttpExchanges extension
    */
-  function addCert(bytes memory cert, bytes32 parentId, bool canSignHttpExchanges)
+  function addCert(bytes memory cert, bytes32 parentId, bool cshx)
   public
   {
     bytes32 certId;
@@ -143,7 +143,7 @@ contract X509InTreeForestOfTrust is Ownable {
     // Add reference from sha256 fingerprint
     refs[sha256(cert)] = certId;
 
-    if (canSignHttpExchanges) {
+    if (cshx) {
       node1 = cert.nextSiblingOf(node1);
       node1 = cert.nextSiblingOf(node1);
       node1 = cert.firstChildOf(node1);
@@ -151,7 +151,7 @@ contract X509InTreeForestOfTrust is Ownable {
       while (Asn1Decode.isChildOf(node2, node1)) {
         node3 = cert.firstChildOf(node2);
         if ( cert.bytes32At(node3) == cshxOid ) {
-          certs[certId].canSignHttpExchanges = true;
+          certs[certId].cshx = true;
           break;
         }
         node2 = cert.nextSiblingOf(node2);
