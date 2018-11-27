@@ -7,47 +7,58 @@ import "sig-verify-algs/contracts/Algorithm.sol";
 import "ens-solidity-namehash/contracts/NameHash.sol";
 import "ethereum-datetime/contracts/DateTime.sol";
 
+/*
+ * @dev Stores validated X.509 certificate chains in parent pointer trees.
+ * @dev The root of each tree is a CA root certificate
+ */
 contract X509InTreeForestOfTrust is Ownable {
   using Asn1Decode for bytes;
   using BytesUtils for bytes;
   using NameHash for string;
 
   constructor(address sha256WithRSAEncryption, address _dateTime) public {
-    algs[keccak256('\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0b')] = Algorithm(sha256WithRSAEncryption);
+    bytes32 a = 0x2a864886f70d01010b0000000000000000000000000000000000000000000000;
+    algs[a] = Algorithm(sha256WithRSAEncryption);
     dateTime = DateTime(_dateTime);
-    cshxOidHash = keccak256("\x55\x1d\x13"); // change to actual oid of canSignHttpExchanges
+    cshxOidHash = 0x551d130000000000000000000000000000000000000000000000000000000000; // change to actual oid of canSignHttpExchanges
   }
 
   DateTime dateTime;
 
   struct Certificate {
     address owner;
-    bytes32 parentCert;
+    bytes32 parentId;
     bytes pubKey;
     uint serialNumber;
     uint validNotAfter;
     bool canSignHttpExchanges;
   }
-  // certId => cert
+  // certId => cert ; certId == keccak256(cert.pubKey)
   mapping (bytes32 => Certificate) public certs;
   // keccak256(commonName) => certId
   mapping (bytes32 => bytes32[]) public certIdsFromCN;
   // sha256Fingerprint => certId or ensNamehash(commonName) => keccak256(commonName)
   mapping (bytes32 => bytes32) public refs;
-
+  // Signature verification contracts
   mapping(bytes32 => Algorithm) private algs;
+  // OID of canSignHttpExchanges since spec may change
   bytes32 private cshxOidHash;
 
-  event CertAdded(bytes32 certId);
-  event CertClaimed(bytes32 certId);
+  event CertAdded(bytes32);
+  event CertClaimed(bytes32);
+  event AlgSet(bytes32, address);
 
+  /*
+   * @dev Add a self-signed X.509 certificate to the root of a new tree
+   * @param cert A DER-encoded self-signed X.509 certificate
+   * @param canSignHttpExchanges Look for CSHX extension
+   */
   function addRootCert(bytes memory cert, bool canSignHttpExchanges)
-  public returns (bool)
+  public
   {
     uint node;
     // Get pub key
     node = cert.root();
-    node = cert.firstChildOf(node);
     node = cert.firstChildOf(node);
     node = cert.firstChildOf(node);
     node = cert.nextSiblingOf(node);
@@ -57,34 +68,18 @@ contract X509InTreeForestOfTrust is Ownable {
     node = cert.nextSiblingOf(node);
     node = cert.nextSiblingOf(node);
     // Set parent/self pub key
-    certs[keccak256(cert.allBytesAt(node))].pubKey = cert.allBytesAt(node);
-    return addCert(cert, keccak256(cert.allBytesAt(node)), canSignHttpExchanges);
+    certs[cert.keccakOfAllBytesAt(node)].pubKey = cert.allBytesAt(node);
+    addCert(cert, cert.keccakOfAllBytesAt(node), canSignHttpExchanges);
   }
 
-  /* TODO add function to set certificate
-  function rovokeCertificate(bytes certificateRevocation, bytes signature, bytes32 authorityCertificateId)
   /*
-   * NOTICE: This function is currently unfinished. Needs to extract
-   * validNotBefore and validNotAfter and initialize the certificate with those
-   * values too!! (shouldn't take much work).
-   *
-   * Adds a X509 certificate to the certs mapping, which is indexed on
-   * certId (the keccak256 hash of its public key). Anyone can call this
-   * method so long as they have the funds to cover the transaction. The
-   * certificate must be signed and valid (but not nessisarily by any existing
-   * certs in the mapping). Certificates may be self-signed. The idea is
-   * to pulicise a verified chain of trust on the blockchain that can be
-   * referenced by other contracts.
-   *
-   * @param tbsCert The entire tbsCertificate node of the der-encoded
-   *        X509 certificate.
-   * @param signature The signed sha256 hash of (DER-encoded) tbsCertificate (signed with
-   *        signersPubKey param). Should be found in same X509 cert as tbsCertificate
-   * @param signersPubKey The DER-encoded node of the public key used to sign
-   *        the signature param.
+   * @dev Add a X.509 certificate to an existing tree/chain
+   * @param cert A DER-encoded X.509 certificate
+   * @param parentId The keccak256 hash of parent cert's public key
+   * @param canSignHttpExchanges Look for CSHX extension
    */
   function addCert(bytes memory cert, bytes32 parentId, bool canSignHttpExchanges)
-  public returns (bool)
+  public
   {
     bytes32 certId;
     uint serialNumber;
@@ -96,7 +91,6 @@ contract X509InTreeForestOfTrust is Ownable {
     node1 = cert.root();
     node1 = cert.firstChildOf(node1);
     node2 = cert.firstChildOf(node1);
-    node2 = cert.firstChildOf(node2);
     node2 = cert.nextSiblingOf(node2);
     // Extract serial number
     serialNumber = cert.uintAt(node2);
@@ -106,9 +100,8 @@ contract X509InTreeForestOfTrust is Ownable {
     node3 = cert.nextSiblingOf(node1);
     node3 = cert.nextSiblingOf(node3);
     // Verify signature
-    require( algs[keccak256(cert.bytesAt(node2))].verify(certs[parentId].pubKey, cert.allBytesAt(node1), cert.bytesAt(node3)), "Signature doesnt match");
+    require( algs[cert.bytes32At(node2)].verify(certs[parentId].pubKey, cert.allBytesAt(node1), cert.bytesAt(node3)), "Signature doesnt match");
 
-    node1 = cert.firstChildOf(node1);
     node1 = cert.firstChildOf(node1);
     node1 = cert.nextSiblingOf(node1);
     node1 = cert.nextSiblingOf(node1);
@@ -125,7 +118,7 @@ contract X509InTreeForestOfTrust is Ownable {
     node1 = cert.nextSiblingOf(node1);
     node2 = cert.nextSiblingOf(node1);
     // Get public key and calculate certId from it
-    certId = keccak256(cert.allBytesAt(node2));
+    certId = cert.keccakOfAllBytesAt(node2);
     if (certId != parentId)
       certs[certId].pubKey = cert.allBytesAt(node2);
 
@@ -134,16 +127,16 @@ contract X509InTreeForestOfTrust is Ownable {
     while (Asn1Decode.isChildOf(node2, node1)) {
       node3 = cert.firstChildOf(node2);
       node3 = cert.firstChildOf(node3);
-      if ( keccak256(cert.bytesAt(node3)) == keccak256("\x55\x04\x03") ) {
+      if ( cert.bytes32At(node3) == 0x5504030000000000000000000000000000000000000000000000000000000000 ) {
         node3 = cert.nextSiblingOf(node3);
-        certIdsFromCN[keccak256(cert.bytesAt(node3))].push(certId);
-        refs[toEnsNamehash(cert.bytesAt(node3))] = keccak256(cert.bytesAt(node3));
+        certIdsFromCN[cert.keccakOfBytesAt(node3)].push(certId);
+        refs[toEnsNamehash(cert.bytesAt(node3))] = cert.keccakOfBytesAt(node3);
         break;
       }
       node2 = cert.nextSiblingOf(node2);
     }
 
-    certs[certId].parentCert = parentId;
+    certs[certId].parentId = parentId;
     certs[certId].serialNumber = serialNumber;
     certs[certId].validNotAfter = validNotAfter;
 
@@ -157,7 +150,7 @@ contract X509InTreeForestOfTrust is Ownable {
       node2 = cert.firstChildOf(node1);
       while (Asn1Decode.isChildOf(node2, node1)) {
         node3 = cert.firstChildOf(node2);
-        if ( keccak256(cert.bytesAt(node3)) == cshxOidHash ) {
+        if ( cert.bytes32At(node3) == cshxOidHash ) {
           certs[certId].canSignHttpExchanges = true;
           break;
         }
@@ -169,31 +162,9 @@ contract X509InTreeForestOfTrust is Ownable {
     emit CertAdded(certId);
   }
 
-  /*
-   * Adds a reference to certIds mapping. Reference must go to a
-   * certId of an existing certificate. The reference (the key) is from
-   * the keccak256 hash of the node at keyLocation of certs[certId]
-   * to certId.
-   *
-   * @param certifiacateId The certId to which we are adding a reference.
-   *        (must be the certId of a certificate in certs mapping)
-   * @param keyLocation The traversal instructions for the desired node from which
-   *        the reference key is derived. Same encoding as "location" param in
-   *        traverse() function.
-   */
-  /* function addReference(bytes32 certId, bytes keyLocation) public {
-    uint node;
-    bytes memory v;
-
-    node = Asn1Decode.traverse(certs[certId].tbsCertificate, keyLocation);
-    v = node.getValue(certs[certId].tbsCertificate);
-    certIds[keccak256(v)].push(certId);
-  } */
-
   /**
-   * The return values of this function are used to proveOwnership() of a
-   * certificate that exists in the certs mapping.
-
+   * @dev The return values of this function are used to proveOwnership() of a
+   * @dev certificate that exists in the certs mapping.
    * @return A unique keccak256 hash to be signed
    * @return The block number used in the hash
    */
@@ -204,16 +175,14 @@ contract X509InTreeForestOfTrust is Ownable {
   }
 
   /**
-   * An eth account calls this method to prove ownership of a certificate in
-   * certs mapping. If successful, certs[certId].owner will
-   * be set to the caller's address. To change owner of a cert, this method must
-   *  be called from the new desired owner address.
-   *
+   * @dev An account calls this method to prove ownership of a certificate.
+   * @dev If successful, certs[certId].owner will be set to caller's address.
    * @param certId The keccak256 hash of target certificate's public key
-   * @param signature The SHA256 RSA signature of signThis()[0]
+   * @param signature signThis()[0] signed with certificate's private key
    * @param blockNumber The value of signThis()[1] (must be >= block.number - 5760)
+   * @param sigAlg The OID of the algorithm used to sign `signature`
    */
-  function proveOwnership(bytes32 certId, bytes signature, uint blockNumber, bytes32 sigAlgHash)
+  function proveOwnership(bytes32 certId, bytes signature, uint blockNumber, bytes32 sigAlg)
   external returns (bool)
   {
     bytes memory message;
@@ -221,7 +190,7 @@ contract X509InTreeForestOfTrust is Ownable {
     require( block.number - blockNumber <= 5760 );
     // Verify signature, which proves ownership
     message = abi.encodePacked(keccak256(abi.encodePacked(msg.sender, blockhash(blockNumber))));
-    require( algs[sigAlgHash].verify(certs[certId].pubKey, message, signature) );
+    require( algs[sigAlg].verify(certs[certId].pubKey, message, signature) );
 
     certs[certId].owner = msg.sender;
 
@@ -265,10 +234,11 @@ contract X509InTreeForestOfTrust is Ownable {
     return string(dn).namehash();
   }
 
-  function setAlgs(bytes32 oidHash, address alg)
+  function setAlg(bytes32 oid, address alg)
   public onlyOwner
   {
-    algs[oidHash] = Algorithm(alg);
+    algs[oid] = Algorithm(alg);
+    emit AlgSet(oid, alg);
   }
 
   function setCshxOidHash(bytes32 _cshxOidHash)
@@ -276,23 +246,4 @@ contract X509InTreeForestOfTrust is Ownable {
   {
     cshxOidHash = _cshxOidHash;
   }
-
-  /* function owner(bytes32 certId) public view returns (address) {
-    return certs[certId].owner;
-  }
-  function parentCert(bytes32 certId) public view returns (bytes32) {
-    return certs[certId].parentCert;
-  }
-  function pubKey(bytes32 certId) public view returns (bytes) {
-    return certs[certId].pubKey;
-  }
-  function serialNumber(bytes32 certId) public view returns (uint) {
-    return certs[certId].serialNumber;
-  }
-  function validNotAfter(bytes32 certId) public view returns (uint) {
-    return certs[certId].validNotAfter;
-  }
-  function canSignHttpExchanges(bytes32 certId) public view returns (bool) {
-    return certs[certId].canSignHttpExchanges;
-  } */
 }

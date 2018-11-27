@@ -16,18 +16,21 @@ contract('X509InTreeForestOfTrust', (accounts) => {
     let result = await instance.addRootCert(parsedCert.cert, true);
     let actualCertId = await instance.certIdsFromCN.call(Web3.utils.sha3(parsedCert.expectedCommonName), 0);
     let actualCertId2 = await instance.refs.call(parsedCert.fingerprint);
+    let cnHash = await instance.refs.call(namehash.hash(parsedCert.expectedCommonName.replace('www.', '')));
+    let actualCertId3 = await instance.certIdsFromCN.call(cnHash, 0);
     let actualCert = await instance.certs.call(expectedCertId);
 
     console.log("      gas: addRootCert(): " + result.receipt.gasUsed);
 
     assert.equal(result.logs[0].event, "CertAdded", "Function did not complete execution");
-    assert.equal(result.logs[0].args["certId"], expectedCertId, "Function completed but with incorrect certId");
-    assert.equal(actualCert.parentCert, expectedCertId, "cert not added");
+    assert.equal(result.logs[0].args[0], expectedCertId, "Function completed but with incorrect certId");
+    assert.equal(actualCert.parentId, expectedCertId, "cert not added");
     assert.equal(actualCert.pubKey, parsedCert.expectedPubKey, "cert not added");
     assert.equal(actualCert.serialNumber, parseInt(parsedCert.expectedSerialNumber), "cert not added");
     assert.isTrue(actualCert.canSignHttpExchanges, "failed to find canSignHttpExchanges extension");
     assert.equal(actualCertId, expectedCertId, "common name doesn't map to certId");
     assert.equal(actualCertId2, expectedCertId, "fingerprint doesn't map to certId");
+    assert.equal(actualCertId3, expectedCertId, "ens namehash doesn't map to certId");
   })
 
   // Test signThis() and proveOwnership()
@@ -37,7 +40,7 @@ contract('X509InTreeForestOfTrust', (accounts) => {
     let privateKey = fs.readFileSync(__dirname + '/key.pem').toString();
     let key = new NodeRSA(privateKey, 'pkcs8');
     let signed = key.sign(tuple[0].slice(2), 'hex', 'hex');
-    let result = await instance.proveOwnership(expectedCertId, "0x"+signed, tuple[1].toNumber(), web3.utils.keccak256("0x2a864886f70d01010b"));
+    let result = await instance.proveOwnership(expectedCertId, "0x"+signed, tuple[1].toNumber(), "0x2a864886f70d01010b");
     let actualCert = await instance.certs.call(expectedCertId);
 
     console.log("      gas: proveOwnership(): " + result.receipt.gasUsed);
@@ -72,10 +75,10 @@ contract('X509InTreeForestOfTrust', (accounts) => {
     let parentPubKeyBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptAuthorityX3PubKey.der', {encoding: 'hex'});
     let instance = await X509Forest.deployed();
     let result = await instance.addCert(certBytes, Web3.utils.sha3(parentPubKeyBytes), false);
-    let parent = (await instance.certs(result.logs[0].args["certId"])).parentCert
-    let parentSquared = (await instance.certs(parent)).parentCert
-    let parentCubed = (await instance.certs(parentSquared)).parentCert
-    let hyperParent = (await instance.certs(parentCubed)).parentCert
+    let parent = (await instance.certs(result.logs[0].args[0])).parentId
+    let parentSquared = (await instance.certs(parent)).parentId
+    let parentCubed = (await instance.certs(parentSquared)).parentId
+    let hyperParent = (await instance.certs(parentCubed)).parentId
 
     console.log("      gas: addCert(): " + result.receipt.gasUsed);
 
