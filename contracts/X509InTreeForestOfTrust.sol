@@ -20,7 +20,7 @@ contract X509InTreeForestOfTrust is Ownable {
     bytes32 a = 0x2a864886f70d01010b0000000000000000000000000000000000000000000000;
     algs[a] = Algorithm(sha256WithRSAEncryption);
     dateTime = DateTime(_dateTime);
-    cshxOidHash = 0x551d130000000000000000000000000000000000000000000000000000000000; // change to actual oid of canSignHttpExchanges
+    cshxOid = 0x551d130000000000000000000000000000000000000000000000000000000000; // change to actual oid of canSignHttpExchanges
   }
 
   DateTime dateTime;
@@ -42,7 +42,7 @@ contract X509InTreeForestOfTrust is Ownable {
   // Signature verification contracts
   mapping(bytes32 => Algorithm) private algs;
   // OID of canSignHttpExchanges since spec may change
-  bytes32 private cshxOidHash;
+  bytes32 private cshxOid;
 
   event CertAdded(bytes32);
   event CertClaimed(bytes32);
@@ -150,7 +150,7 @@ contract X509InTreeForestOfTrust is Ownable {
       node2 = cert.firstChildOf(node1);
       while (Asn1Decode.isChildOf(node2, node1)) {
         node3 = cert.firstChildOf(node2);
-        if ( cert.bytes32At(node3) == cshxOidHash ) {
+        if ( cert.bytes32At(node3) == cshxOid ) {
           certs[certId].canSignHttpExchanges = true;
           break;
         }
@@ -241,9 +241,9 @@ contract X509InTreeForestOfTrust is Ownable {
     emit AlgSet(oid, alg);
   }
 
-  function setCshxOidHash(bytes32 _cshxOidHash)
+  function setCshxOidHash(bytes32 _cshxOid)
   public onlyOwner
   {
-    cshxOidHash = _cshxOidHash;
+    cshxOid = _cshxOid;
   }
 }
