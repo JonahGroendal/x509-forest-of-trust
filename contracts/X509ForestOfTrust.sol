@@ -1,7 +1,7 @@
 pragma solidity  ^0.4.25;
 
-import "asn1-decode/contracts/Asn1Decode.sol";
 import "./Ownable.sol";
+import "asn1-decode/contracts/Asn1Decode.sol";
 import "@ensdomains/dnssec-oracle/contracts/BytesUtils.sol";
 import "sig-verify-algs/contracts/Algorithm.sol";
 import "ens-solidity-namehash/contracts/NameHash.sol";
@@ -11,7 +11,7 @@ import "ethereum-datetime/contracts/DateTime.sol";
  * @dev Stores validated X.509 certificate chains in parent pointer trees.
  * @dev The root of each tree is a CA root certificate
  */
-contract X509InTreeForestOfTrust is Ownable {
+contract X509ForestOfTrust is Ownable {
   using Asn1Decode for bytes;
   using BytesUtils for bytes;
   using NameHash for string;
