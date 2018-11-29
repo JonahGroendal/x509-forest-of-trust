@@ -1,23 +1,22 @@
-pragma solidity  ^0.4.25;
+pragma solidity ^0.4.25;
 
 contract Ownable {
   constructor() internal {
     owner = msg.sender;
   }
 
-  address owner;
+  address private owner;
+
+  event ownershipTransferred(address, address);
 
   modifier onlyOwner() {
     require(msg.sender == owner);
     _;
   }
 
-  event OwnerSet(address);
-
-  function setOwner(address _owner)
-  public onlyOwner
-  {
-    owner = _owner;
-    emit OwnerSet(_owner);
+  function transferOwnership(address newOwner) public onlyOwner {
+    emit ownershipTransferred(owner, newOwner);
+    owner = newOwner;
   }
+
 }

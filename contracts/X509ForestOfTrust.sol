@@ -197,6 +197,21 @@ contract X509ForestOfTrust is Ownable {
     emit CertClaimed(certId);
   }
 
+  function rootOf(bytes32 certId)
+  public view returns (bytes32)
+  {
+    while (certId != certs[certId].parentId) {
+      certId = certs[certId].parentId;
+    }
+    return certId;
+  }
+
+  function certIdsLength(bytes32 commonNameHash)
+  public view returns (uint)
+  {
+    return certIdsFromCN[commonNameHash].length;
+  }
+
   function toTimestamp(bytes memory x509Time)
   private view returns (uint)
   {
