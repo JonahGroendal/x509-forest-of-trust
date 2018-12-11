@@ -1,10 +1,10 @@
-pragma solidity  ^0.4.25;
+pragma solidity  ^0.5.1;
 
 import "./Ownable.sol";
 import "asn1-decode/contracts/Asn1Decode.sol";
-import "@ensdomains/dnssec-oracle/contracts/BytesUtils.sol";
+//import "solidity-bytes-utils/contracts/BytesUtils.sol";
 import "sig-verify-algs/contracts/Algorithm.sol";
-import "ens-solidity-namehash/contracts/NameHash.sol";
+import "ens-namehash/contracts/ENSNamehash.sol";
 import "ethereum-datetime/contracts/DateTime.sol";
 
 /*
@@ -14,7 +14,7 @@ import "ethereum-datetime/contracts/DateTime.sol";
 contract X509ForestOfTrust is Ownable {
   using Asn1Decode for bytes;
   using BytesUtils for bytes;
-  using NameHash for string;
+  using ENSNamehash for bytes;
 
   constructor(address sha256WithRSAEncryption, address _dateTime) public {
     bytes32 a = 0x2a864886f70d01010b0000000000000000000000000000000000000000000000;
@@ -164,7 +164,7 @@ contract X509ForestOfTrust is Ownable {
 
   /**
    * @dev The return values of this function are used to proveOwnership() of a
-   * @dev certificate that exists in the certs mapping.
+   *      certificate that exists in the certs mapping.
    * @return A unique keccak256 hash to be signed
    * @return The block number used in the hash
    */
@@ -176,13 +176,13 @@ contract X509ForestOfTrust is Ownable {
 
   /**
    * @dev An account calls this method to prove ownership of a certificate.
-   * @dev If successful, certs[certId].owner will be set to caller's address.
+   *      If successful, certs[certId].owner will be set to caller's address.
    * @param certId The keccak256 hash of target certificate's public key
    * @param signature signThis()[0] signed with certificate's private key
    * @param blockNumber The value of signThis()[1] (must be >= block.number - 5760)
    * @param sigAlg The OID of the algorithm used to sign `signature`
    */
-  function proveOwnership(bytes32 certId, bytes signature, uint blockNumber, bytes32 sigAlg)
+  function proveOwnership(bytes32 certId, bytes calldata signature, uint blockNumber, bytes32 sigAlg)
   external returns (bool)
   {
     bytes memory message;
@@ -206,10 +206,16 @@ contract X509ForestOfTrust is Ownable {
     return certId;
   }
 
-  function certIdsLength(bytes32 commonNameHash)
+  function certIdsFromCNLength(bytes32 commonNameHash)
   public view returns (uint)
   {
     return certIdsFromCN[commonNameHash].length;
+  }
+
+  function owners(bytes32 certId)
+  public view returns (address)
+  {
+    return certs[certId].owner;
   }
 
   function toTimestamp(bytes memory x509Time)
@@ -221,11 +227,11 @@ contract X509ForestOfTrust is Ownable {
     uint8  offset;
 
     if (x509Time.length == 13) {
-      if (uint16(x509Time[0])-48 < 5) yrs += 2000;
+      if (uint8(x509Time[0])-48 < 5) yrs += 2000;
       else yrs += 1900;
     }
     else {
-      yrs += (uint16(x509Time[0])-48) * 1000 + (uint16(x509Time[1])-48) * 100;
+      yrs += (uint8(x509Time[0])-48) * 1000 + (uint8(x509Time[1])-48) * 100;
       offset = 2;
     }
     yrs +=  (uint8(x509Time[offset+0])-48)*10 + uint8(x509Time[offset+1])-48;
@@ -239,14 +245,14 @@ contract X509ForestOfTrust is Ownable {
   }
 
   function toEnsNamehash(bytes memory dn)
-  private view returns (bytes32)
+  private pure returns (bytes32)
   {
     // if common name starts with 'www.'
     if (dn[0] == 0x77 && dn[1] == 0x77 && dn[2] == 0x77 && dn[3] == 0x2e)
       // omit 'www.'
-      return string(dn.substring(4, dn.length-4)).namehash();
+      return dn.substring(4, dn.length-4).namehash();
 
-    return string(dn).namehash();
+    return dn.namehash();
   }
 
   function setAlg(bytes32 oid, address alg)
@@ -256,7 +262,7 @@ contract X509ForestOfTrust is Ownable {
     emit AlgSet(oid, alg);
   }
 
-  function setCshxOidHash(bytes32 _cshxOid)
+  function setCshxOid(bytes32 _cshxOid)
   public onlyOwner
   {
     cshxOid = _cshxOid;

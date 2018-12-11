@@ -25,12 +25,12 @@
   },
   "homepage": "https://github.com/JonahGroendal/x509-forest-of-trust#readme",
   "dependencies": {
-    "@ensdomains/dnssec-oracle": "github:ensdomains/dnssec-oracle",
     "asn1-decode": "git+ssh://git@github.com/JonahGroendal/asn1-decode.git",
-    "ens-solidity-namehash": "github:JonahGroendal/ens-solidity-namehash",
+    "ens-namehash": "github:JonahGroendal/ens-namehash",
     "ethereum-datetime": "github:JonahGroendal/ethereum-datetime",
     "js-sha256": "^0.9.0",
-    "sig-verify-algs": "git+ssh://git@github.com/JonahGroendal/sig-verify-algs.git"
+    "sig-verify-algs": "git+ssh://git@github.com/JonahGroendal/sig-verify-algs.git",
+    "solidity-bytes-utils": "github:JonahGroendal/solidity-bytes-utils"
   },
   "devDependencies": {
     "eth-ens-namehash": "^2.0.8",
