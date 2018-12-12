@@ -165,13 +165,13 @@ contract X509ForestOfTrust is Ownable {
   /**
    * @dev The return values of this function are used to proveOwnership() of a
    *      certificate that exists in the certs mapping.
-   * @return A unique keccak256 hash to be signed
-   * @return The block number used in the hash
+   * @return Some unique bytes to be signed
+   * @return The block number used to create the first return value
    */
   function signThis()
-  external view returns (bytes32, uint)
+  external view returns (bytes memory, uint)
   {
-    return ( keccak256(abi.encodePacked(msg.sender, blockhash(block.number - 1))), block.number -1 );
+    return ( abi.encodePacked(msg.sender, blockhash(block.number - 1)), block.number -1 );
   }
 
   /**
@@ -179,17 +179,18 @@ contract X509ForestOfTrust is Ownable {
    *      If successful, certs[certId].owner will be set to caller's address.
    * @param certId The keccak256 hash of target certificate's public key
    * @param signature signThis()[0] signed with certificate's private key
-   * @param blockNumber The value of signThis()[1] (must be >= block.number - 5760)
+   * @param blockNumber The value of signThis()[1] (must be > block.number - 256)
    * @param sigAlg The OID of the algorithm used to sign `signature`
    */
   function proveOwnership(bytes32 certId, bytes calldata signature, uint blockNumber, bytes32 sigAlg)
   external returns (bool)
   {
     bytes memory message;
-    // Only accept proof if it's less than about one day old (at 15sec/block)
-    require( block.number - blockNumber <= 5760 );
+    // Only accept proof if it's less than 256 blocks old
+    // This is the most time I can give since blockhash() can only return the 256 most recent
+    require( block.number - blockNumber < 256 );
     // Verify signature, which proves ownership
-    message = abi.encodePacked(keccak256(abi.encodePacked(msg.sender, blockhash(blockNumber))));
+    message = abi.encodePacked(msg.sender, blockhash(blockNumber));
     require( algs[sigAlg].verify(certs[certId].pubKey, message, signature) );
 
     certs[certId].owner = msg.sender;
