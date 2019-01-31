@@ -3,21 +3,21 @@ var RsaSha256Algorithm = artifacts.require("RsaSha256Algorithm")
 var parsedCert = require('./cert')
 var namehash = require('eth-ens-namehash')
 var NodeRSA = require('node-rsa')
-var Web3 = require('web3')
+//var Web3 = require('web3')
 var fs = require('fs')
 var sha256 = require('js-sha256')
 
-var expectedCertId = Web3.utils.sha3(parsedCert.expectedPubKey, {encoding: 'hex'})
+var expectedCertId = web3.utils.sha3(parsedCert.expectedPubKey, {encoding: 'hex'})
 
 contract('X509ForestOfTrust', (accounts) => {
   // Test addRootCert()
   it("should add a valid self-signed certificate and its references", async () => {
     let instance = await X509Forest.deployed()
     let result = await instance.addRootCert(parsedCert.cert, true)
-    let actualCertId = await instance.certIdsFromCN.call(Web3.utils.sha3(parsedCert.expectedCommonName), 0)
-    let actualCertId2 = await instance.refs.call(parsedCert.fingerprint)
-    let cnHash = await instance.refs.call(namehash.hash(parsedCert.expectedCommonName.replace('www.', '')))
-    let actualCertId3 = await instance.certIdsFromCN.call(cnHash, 0)
+    let actualCertId = await instance.toCertIds.call(namehash.hash(parsedCert.expectedCommonName.replace('www.', '')), 0)
+    let actualCertId2 = await instance.toCertId.call(parsedCert.fingerprint)
+    //let cnHash = await instance.refs.call(namehash.hash(parsedCert.expectedCommonName.replace('www.', '')))
+    //let actualCertId3 = await instance.certIdsFromCN.call(cnHash, 0)
     let actualCert = await instance.certs.call(expectedCertId)
 
     console.log("      gas: addRootCert(): " + result.receipt.gasUsed)
@@ -28,9 +28,9 @@ contract('X509ForestOfTrust', (accounts) => {
     assert.equal(actualCert.pubKey, parsedCert.expectedPubKey, "cert not added")
     assert.equal(actualCert.serialNumber, parseInt(parsedCert.expectedSerialNumber), "cert not added")
     assert.isTrue(actualCert.cshx, "failed to find canSignHttpExchanges extension")
-    assert.equal(actualCertId, expectedCertId, "common name doesn't map to certId")
+    assert.equal(actualCertId, expectedCertId, "namehash of commonName doesn't map to certId")
     assert.equal(actualCertId2, expectedCertId, "fingerprint doesn't map to certId")
-    assert.equal(actualCertId3, expectedCertId, "ens namehash doesn't map to certId")
+    //assert.equal(actualCertId3, expectedCertId, "ens namehash doesn't map to certId")
   })
 
   // Test signThis() and proveOwnership()
@@ -63,7 +63,7 @@ contract('X509ForestOfTrust', (accounts) => {
     let certBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptAuthorityX3.der', {encoding: 'hex'})
     let parentPubKeyBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptRootPubKey.der', {encoding: 'hex'})
     let instance = await X509Forest.deployed()
-    let result = await instance.addCert(certBytes, Web3.utils.sha3(parentPubKeyBytes), false)
+    let result = await instance.addCert(certBytes, web3.utils.sha3(parentPubKeyBytes), false)
 
     console.log("      gas: addCert(): " + result.receipt.gasUsed)
 
@@ -74,7 +74,8 @@ contract('X509ForestOfTrust', (accounts) => {
     let certBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptTest.der', {encoding: 'hex'})
     let parentPubKeyBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptAuthorityX3PubKey.der', {encoding: 'hex'})
     let instance = await X509Forest.deployed()
-    let result = await instance.addCert(certBytes, Web3.utils.sha3(parentPubKeyBytes), false)
+    let result = await instance.addCert(certBytes, web3.utils.sha3(parentPubKeyBytes), false)
+    let certId = await instance.toCertIds(namehash.hash("valid-isrgrootx1.letsencrypt.org"), 0)
     let parent = (await instance.certs(result.logs[0].args[0])).parentId
     let parentSquared = (await instance.certs(parent)).parentId
     let parentCubed = (await instance.certs(parentSquared)).parentId
@@ -82,6 +83,7 @@ contract('X509ForestOfTrust', (accounts) => {
 
     console.log("      gas: addCert(): " + result.receipt.gasUsed)
 
+    assert.equal(certId, result.logs[0].args[0], "ensNode reference not added")
     assert.equal(result.logs[0].event, "CertAdded", "Function did not complete execution")
     assert.equal(parentCubed, hyperParent, "Certificate chain broken somewhere")
   })

@@ -1,4 +1,4 @@
-pragma solidity  ^0.5.1;
+pragma solidity  ^0.5.2;
 
 import "./Ownable.sol";
 import "asn1-decode/contracts/Asn1Decode.sol";
@@ -17,8 +17,8 @@ contract X509ForestOfTrust is Ownable {
   using ENSNamehash for bytes;
 
   constructor(address sha256WithRSAEncryption, address _dateTime) public {
-    bytes32 a = 0x2a864886f70d01010b0000000000000000000000000000000000000000000000;
-    algs[a] = Algorithm(sha256WithRSAEncryption);
+    bytes32 oid = 0x2a864886f70d01010b0000000000000000000000000000000000000000000000;
+    algs[oid] = Algorithm(sha256WithRSAEncryption);
     dateTime = DateTime(_dateTime);
     cshxOid = 0x551d130000000000000000000000000000000000000000000000000000000000; // change to actual oid of canSignHttpExchanges
   }
@@ -33,12 +33,12 @@ contract X509ForestOfTrust is Ownable {
     uint validNotAfter;
     bool cshx; // canSignHttpExchanges
   }
-  // certId => cert ; certId == keccak256(cert.pubKey)
+  // certId => cert  (certId is keccak256(cert.pubKey))
   mapping (bytes32 => Certificate) public certs;
-  // keccak256(commonName) => certId
-  mapping (bytes32 => bytes32[]) public certIdsFromCN;
-  // sha256Fingerprint => certId or ensNamehash(commonName) => keccak256(commonName)
-  mapping (bytes32 => bytes32) public refs;
+  // ensNamehash(commonName) => certId  OR  ensNamehash(subjectAltName) => certId
+  mapping (bytes32 => bytes32[]) public toCertIds;
+  // sha256Fingerprint => certId
+  mapping (bytes32 => bytes32) public toCertId;
   // Signature verification contracts
   mapping(bytes32 => Algorithm) private algs;
   // OID of canSignHttpExchanges since spec may change
@@ -83,10 +83,11 @@ contract X509ForestOfTrust is Ownable {
   {
     bytes32 certId;
     uint serialNumber;
-    uint validNotAfter;
     uint node1;
     uint node2;
     uint node3;
+    bytes32 tempB;
+    uint tempU;
 
     node1 = cert.root();
     node1 = cert.firstChildOf(node1);
@@ -108,12 +109,13 @@ contract X509ForestOfTrust is Ownable {
     node1 = cert.nextSiblingOf(node1);
     node1 = cert.nextSiblingOf(node1);
 
-    // Get timestamps
     node2 = cert.firstChildOf(node1);
+    // Check validNotBefore
     require(toTimestamp(cert.bytesAt(node2)) <= now, "Invalid cert");
     node2 = cert.nextSiblingOf(node2);
-    validNotAfter = toTimestamp(cert.bytesAt(node2));
-    require(now <= validNotAfter, "Invalid cert");
+    // Check validNotAfter
+    tempU = toTimestamp(cert.bytesAt(node2));
+    require(now <= tempU, "Invalid cert");
 
     node1 = cert.nextSiblingOf(node1);
     node2 = cert.nextSiblingOf(node1);
@@ -129,8 +131,7 @@ contract X509ForestOfTrust is Ownable {
       node3 = cert.firstChildOf(node3);
       if ( cert.bytes32At(node3) == 0x5504030000000000000000000000000000000000000000000000000000000000 ) {
         node3 = cert.nextSiblingOf(node3);
-        certIdsFromCN[cert.keccakOfBytesAt(node3)].push(certId);
-        refs[toEnsNamehash(cert.bytesAt(node3))] = cert.keccakOfBytesAt(node3);
+        toCertIds[toEnsNamehash(cert.bytesAt(node3))].push(certId);
         break;
       }
       node2 = cert.nextSiblingOf(node2);
@@ -138,24 +139,35 @@ contract X509ForestOfTrust is Ownable {
 
     certs[certId].parentId = parentId;
     certs[certId].serialNumber = serialNumber;
-    certs[certId].validNotAfter = validNotAfter;
+    certs[certId].validNotAfter = tempU;
 
     // Add reference from sha256 fingerprint
-    refs[sha256(cert)] = certId;
+    toCertId[sha256(cert)] = certId;
 
-    if (cshx) {
-      node1 = cert.nextSiblingOf(node1);
-      node1 = cert.nextSiblingOf(node1);
-      node1 = cert.firstChildOf(node1);
-      node2 = cert.firstChildOf(node1);
-      while (Asn1Decode.isChildOf(node2, node1)) {
-        node3 = cert.firstChildOf(node2);
-        if ( cert.bytes32At(node3) == cshxOid ) {
-          certs[certId].cshx = true;
-          break;
-        }
-        node2 = cert.nextSiblingOf(node2);
+    node1 = cert.nextSiblingOf(node1);
+    node1 = cert.nextSiblingOf(node1);
+    node1 = cert.firstChildOf(node1);
+    node2 = cert.firstChildOf(node1);
+    while (Asn1Decode.isChildOf(node2, node1)) {
+      node3 = cert.firstChildOf(node2);
+      if (cshx && cert.bytes32At(node3) == cshxOid) {
+        certs[certId].cshx = true;
+        cshx = false;
       }
+      // Subject Alternative Name
+      else if (cert.bytes32At(node3) == 0x551d110000000000000000000000000000000000000000000000000000000000 ) {
+        node3 = cert.nextSiblingOf(node3);
+        node3 = cert.rootOfOctetStringAt(node3);
+        tempU = cert.firstChildOf(node3);
+        while (Asn1Decode.isChildOf(tempU, node3)) {
+          tempB = toEnsNamehash(cert.bytesAt(tempU));
+          if (toCertIds[tempB].length == 0 || toCertIds[tempB][toCertIds[tempB].length-1] != certId)
+            toCertIds[tempB].push(certId);
+          tempU = cert.nextSiblingOf(tempU);
+        }
+        if (!cshx) break;
+      }
+      node2 = cert.nextSiblingOf(node2);
     }
 
     // Fire event
@@ -207,16 +219,16 @@ contract X509ForestOfTrust is Ownable {
     return certId;
   }
 
-  function certIdsFromCNLength(bytes32 commonNameHash)
-  public view returns (uint)
-  {
-    return certIdsFromCN[commonNameHash].length;
-  }
-
-  function owners(bytes32 certId)
+  function ownerOf(bytes32 certId)
   public view returns (address)
   {
     return certs[certId].owner;
+  }
+
+  function toCertIdsLength(bytes32 commonNameHash)
+  public view returns (uint)
+  {
+    return toCertIds[commonNameHash].length;
   }
 
   function toTimestamp(bytes memory x509Time)
