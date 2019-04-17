@@ -1,7 +1,7 @@
 {
   "name": "x509-forest-of-trust",
   "version": "1.0.0",
-  "description": "Solidity contract for storing X509 certificate chains in parent pointer trees on ETH blockchain",
+  "description": "Solidity contract for storing verified X509 certificate chains in parent pointer trees on ETH blockchain",
   "directories": {
     "test": "test"
   },
