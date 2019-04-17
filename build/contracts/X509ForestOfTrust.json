@@ -32161,17 +32161,17 @@
     "version": "0.5.2+commit.1df8f40c.Emscripten.clang"
   },
   "networks": {
-    "1555540648561": {
+    "1555541378205": {
       "events": {},
       "links": {
-        "ENSNamehash": "0x29dcfF491321DC1e1FF09b430E37BF7B21ECA0Cd"
+        "ENSNamehash": "0xfCb3E922e7ea9EEa8EFF30616cE3D7fFE6e535F8"
       },
-      "address": "0xE59421fA811FD106812524A1760d664598F73Fed",
-      "transactionHash": "0x3d74b079cfd442502dcd83bf4064c422fdee9b8df7e065bf3785ff1b7ba6d335"
+      "address": "0x9F249F2a3592C59931F47309cb1a8845CC85382a",
+      "transactionHash": "0x57bfe98099632748f58d014fd801ea9a987f60e647e1cd90fb88841a6ebbf470"
     }
   },
   "schemaVersion": "3.0.1",
-  "updatedAt": "2019-04-17T22:39:05.760Z",
+  "updatedAt": "2019-04-17T22:49:48.132Z",
   "devdoc": {
     "methods": {
       "proveOwnership(bytes32,bytes,uint256,bytes32)": {
