@@ -28,8 +28,7 @@
     "asn1-decode": "github:JonahGroendal/asn1-decode",
     "ens-namehash": "github:JonahGroendal/ens-namehash",
     "ethereum-datetime": "github:JonahGroendal/ethereum-datetime",
-    "sig-verify-algs": "github:JonahGroendal/sig-verify-algs.git",
-    "solidity-bytes-utils": "github:JonahGroendal/solidity-bytes-utils"
+    "sig-verify-algs": "github:JonahGroendal/sig-verify-algs.git"
   },
   "devDependencies": {
     "eth-ens-namehash": "^2.0.8",
