@@ -13,7 +13,6 @@ import "ethereum-datetime/contracts/DateTime.sol";
  */
 contract X509ForestOfTrust is Ownable {
   using Asn1Decode for bytes;
-  using BytesUtils for bytes;
   using ENSNamehash for bytes;
 
   constructor(address sha256WithRSAEncryption, address _dateTime) public {
@@ -131,7 +130,7 @@ contract X509ForestOfTrust is Ownable {
       node3 = cert.firstChildOf(node3);
       if ( cert.bytes32At(node3) == 0x5504030000000000000000000000000000000000000000000000000000000000 ) {
         node3 = cert.nextSiblingOf(node3);
-        toCertIds[toEnsNamehash(cert.bytesAt(node3))].push(certId);
+        toCertIds[cert.bytesAt(node3).namehash()].push(certId);
         break;
       }
       node2 = cert.nextSiblingOf(node2);
@@ -160,7 +159,7 @@ contract X509ForestOfTrust is Ownable {
         node3 = cert.rootOfOctetStringAt(node3);
         tempU = cert.firstChildOf(node3);
         while (Asn1Decode.isChildOf(tempU, node3)) {
-          tempB = toEnsNamehash(cert.bytesAt(tempU));
+          tempB = cert.bytesAt(tempU).namehash();
           if (toCertIds[tempB].length == 0 || toCertIds[tempB][toCertIds[tempB].length-1] != certId)
             toCertIds[tempB].push(certId);
           tempU = cert.nextSiblingOf(tempU);
@@ -211,22 +210,53 @@ contract X509ForestOfTrust is Ownable {
   }
 
   function rootOf(bytes32 certId)
-  public view returns (bytes32)
+  external view returns (bytes32)
   {
-    while (certId != certs[certId].parentId) {
-      certId = certs[certId].parentId;
+    bytes32 id = certId;
+    while (id != certs[id].parentId) {
+      id = certs[id].parentId;
     }
-    return certId;
+    return id;
   }
 
-  function ownerOf(bytes32 certId)
-  public view returns (address)
+  function owner(bytes32 certId)
+  external view returns (address)
   {
     return certs[certId].owner;
   }
 
+  function parentId(bytes32 certId)
+  external view returns (bytes32)
+  {
+    return certs[certId].parentId;
+  }
+
+  function pubKey(bytes32 certId)
+  external view returns (bytes memory)
+  {
+    return certs[certId].pubKey;
+  }
+
+  function serialNumber(bytes32 certId)
+  external view returns (uint)
+  {
+    return certs[certId].serialNumber;
+  }
+
+  function validNotAfter(bytes32 certId)
+  external view returns (uint)
+  {
+    return certs[certId].validNotAfter;
+  }
+
+  function cshx(bytes32 certId)
+  external view returns (bool)
+  {
+    return certs[certId].cshx;
+  }
+
   function toCertIdsLength(bytes32 commonNameHash)
-  public view returns (uint)
+  external view returns (uint)
   {
     return toCertIds[commonNameHash].length;
   }
@@ -257,26 +287,15 @@ contract X509ForestOfTrust is Ownable {
     return dateTime.toTimestamp(yrs, mnths, dys, hrs, mins, secs);
   }
 
-  function toEnsNamehash(bytes memory dn)
-  private pure returns (bytes32)
-  {
-    // if common name starts with 'www.'
-    if (dn[0] == 0x77 && dn[1] == 0x77 && dn[2] == 0x77 && dn[3] == 0x2e)
-      // omit 'www.'
-      return dn.substring(4, dn.length-4).namehash();
-
-    return dn.namehash();
-  }
-
   function setAlg(bytes32 oid, address alg)
-  public onlyOwner
+  external onlyOwner
   {
     algs[oid] = Algorithm(alg);
     emit AlgSet(oid, alg);
   }
 
   function setCshxOid(bytes32 _cshxOid)
-  public onlyOwner
+  external onlyOwner
   {
     cshxOid = _cshxOid;
   }

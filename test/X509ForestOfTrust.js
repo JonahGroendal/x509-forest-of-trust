@@ -14,7 +14,7 @@ contract('X509ForestOfTrust', (accounts) => {
   it("should add a valid self-signed certificate and its references", async () => {
     let instance = await X509Forest.deployed()
     let result = await instance.addRootCert(parsedCert.cert, true)
-    let actualCertId = await instance.toCertIds.call(namehash.hash(parsedCert.expectedCommonName.replace('www.', '')), 0)
+    let actualCertId = await instance.toCertIds.call(namehash.hash(parsedCert.expectedCommonName), 0)
     let actualCertId2 = await instance.toCertId.call(parsedCert.fingerprint)
     //let cnHash = await instance.refs.call(namehash.hash(parsedCert.expectedCommonName.replace('www.', '')))
     //let actualCertId3 = await instance.certIdsFromCN.call(cnHash, 0)
@@ -70,21 +70,34 @@ contract('X509ForestOfTrust', (accounts) => {
     assert.equal(result.logs[0].event, "CertAdded", "Function did not complete execution")
   })
 
-  it("should add cert signed by LetsEncrypt's intermediate cert", async () => {
+  // Failing because cert is expired now
+  // it("should add cert signed by LetsEncrypt's intermediate cert", async () => {
+  //   let certBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptTest.der', {encoding: 'hex'})
+  //   let parentPubKeyBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptAuthorityX3PubKey.der', {encoding: 'hex'})
+  //   let instance = await X509Forest.deployed()
+  //   let result = await instance.addCert(certBytes, web3.utils.sha3(parentPubKeyBytes), false)
+  //   let certId = await instance.toCertIds(namehash.hash("valid-isrgrootx1.letsencrypt.org"), 0)
+  //   let parent = (await instance.certs(result.logs[0].args[0])).parentId
+  //   let parentSquared = (await instance.certs(parent)).parentId
+  //   let parentCubed = (await instance.certs(parentSquared)).parentId
+  //   let hyperParent = (await instance.certs(parentCubed)).parentId
+  //
+  //   console.log("      gas: addCert(): " + result.receipt.gasUsed)
+  //
+  //   assert.equal(certId, result.logs[0].args[0], "ensNode reference not added")
+  //   assert.equal(result.logs[0].event, "CertAdded", "Function did not complete execution")
+  //   assert.equal(parentCubed, hyperParent, "Certificate chain broken somewhere")
+  // })
+
+  it("should fail to add an expired, but otherwise valid, cert signed by LetsEncrypt's intermediate cert", async () => {
     let certBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptTest.der', {encoding: 'hex'})
     let parentPubKeyBytes = '0x' + fs.readFileSync(__dirname + '/letsEncryptAuthorityX3PubKey.der', {encoding: 'hex'})
     let instance = await X509Forest.deployed()
-    let result = await instance.addCert(certBytes, web3.utils.sha3(parentPubKeyBytes), false)
-    let certId = await instance.toCertIds(namehash.hash("valid-isrgrootx1.letsencrypt.org"), 0)
-    let parent = (await instance.certs(result.logs[0].args[0])).parentId
-    let parentSquared = (await instance.certs(parent)).parentId
-    let parentCubed = (await instance.certs(parentSquared)).parentId
-    let hyperParent = (await instance.certs(parentCubed)).parentId
-
-    console.log("      gas: addCert(): " + result.receipt.gasUsed)
-
-    assert.equal(certId, result.logs[0].args[0], "ensNode reference not added")
-    assert.equal(result.logs[0].event, "CertAdded", "Function did not complete execution")
-    assert.equal(parentCubed, hyperParent, "Certificate chain broken somewhere")
+    try {
+      let result = await instance.addCert(certBytes, web3.utils.sha3(parentPubKeyBytes), false)
+      assert.isTrue(false, "Added an invalid cert")
+    } catch (error) {
+      assert.isTrue(error.message.includes("Invalid cert"), "Reverted for the wrong reason")
+    }
   })
 })
