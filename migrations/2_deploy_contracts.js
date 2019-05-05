@@ -12,5 +12,5 @@ module.exports = function(deployer, network) {
   deployer.link(ENSNamehash, X509ForestOfTrust);
   deployer.deploy(RsaSha256Algorithm, { overwrite: false })
   .then(() => deployer.deploy(DateTime, { overwrite: false }))
-  .then(() => deployer.deploy(X509ForestOfTrust, RsaSha256Algorithm.address, DateTime.address));
+  .then(() => deployer.deploy(X509ForestOfTrust, RsaSha256Algorithm.address, DateTime.address, { gas: 5000000, overwrite: false }));
 };

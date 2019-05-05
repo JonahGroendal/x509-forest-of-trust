@@ -28,7 +28,8 @@
     "asn1-decode": "github:JonahGroendal/asn1-decode",
     "ens-namehash": "github:JonahGroendal/ens-namehash",
     "ethereum-datetime": "github:JonahGroendal/ethereum-datetime",
-    "sig-verify-algs": "github:JonahGroendal/sig-verify-algs.git"
+    "sig-verify-algs": "github:JonahGroendal/sig-verify-algs.git",
+    "truffle-hdwallet-provider": "^1.0.8"
   },
   "devDependencies": {
     "eth-ens-namehash": "^2.0.8",

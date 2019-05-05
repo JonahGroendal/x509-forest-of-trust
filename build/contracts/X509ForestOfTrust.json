@@ -32366,17 +32366,33 @@
     "version": "0.5.2+commit.1df8f40c.Emscripten.clang"
   },
   "networks": {
+    "42": {
+      "events": {},
+      "links": {
+        "ENSNamehash": "0xdffa42dBEAeE10e50b9F704cA35D14D519CEdd95"
+      },
+      "address": "0x496EAD804b7886DfdD0BD116DDe33e779cad64F0",
+      "transactionHash": "0xea56f21d3569966fa8e63d74e481c99d38769629470fba8503dfd890efdc1c5a"
+    },
     "1555887859856": {
       "events": {},
       "links": {
-        "ENSNamehash": "0x2D5265b20054070d2ddB8265829b4CB257E7C88d"
+        "ENSNamehash": "0x7dEbbd38D5EdDDDC6FEf7d714b1A2cf119eCf3CE"
       },
-      "address": "0x9a77B72D453c7204175A9CF4640c182CE7Cc5435",
-      "transactionHash": "0xb40c7144c9a8ec7a4ee3d1b6df9c75adf99265d68619927d1d5638c9e5477c9f"
+      "address": "0x7235F135302b604CED5ebc0039e536C49A907d9B",
+      "transactionHash": "0x64da80224b6ac6db989cb9d34d50b5b676ac2872c506cc3054459afd7e86e319"
+    },
+    "1557093407736": {
+      "events": {},
+      "links": {
+        "ENSNamehash": "0x4Cf0D4b32402409280D1D2C272b7d3c00fF7b81c"
+      },
+      "address": "0xE73050847C28Da8eA9ca04f9Cc83C8A92b60f7f6",
+      "transactionHash": "0xa48350c3f6da8e157f08714b1aeeaa5f09424ebc805c2ceae6a4e33d01b28a99"
     }
   },
   "schemaVersion": "3.0.6",
-  "updatedAt": "2019-04-21T23:35:06.844Z",
+  "updatedAt": "2019-05-05T23:14:04.688Z",
   "devdoc": {
     "methods": {
       "proveOwnership(bytes32,bytes,uint256,bytes32)": {

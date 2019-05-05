@@ -95,9 +95,9 @@ contract('X509ForestOfTrust', (accounts) => {
     let instance = await X509Forest.deployed()
     try {
       let result = await instance.addCert(certBytes, web3.utils.sha3(parentPubKeyBytes), false)
-      assert.isTrue(false, "Added an invalid cert")
     } catch (error) {
-      assert.isTrue(error.message.includes("Invalid cert"), "Reverted for the wrong reason")
+      return;
     }
+    assert.isTrue(false, "Added an invalid cert")
   })
 })
