@@ -1,0 +1,32 @@
+{
+    "root": [
+        { "name": "basicConstraints", "critical": true, "cA": true },
+        { "name": "keyUsage", "keyCertSign": true, "cRLSign": true }
+    ],
+    "intermediate": [
+        { "name": "basicConstraints", "critical": true, "cA": true, "pathLenConstraint": 0 },
+        { "name": "keyUsage", "digitalSignature": true, "keyCertSign": true }
+    ],
+    "leaf": [{
+        "name": "subjectAltName",
+        "altNames": [
+            {"type": 2, "value": "pkipay.net" },
+            { "type": 2, "value": "www.pkipay.net"}
+        ]
+    },{
+        "name": "keyUsage",
+        "digitalSignature": true,
+        "keyEncipherment": true,
+        "decipherOnly": true
+    }, {
+        "name": "extKeyUsage",
+        "serverAuth": true,
+        "clientAuth": true,
+        "codeSigning": true,
+        "emailProtection": true,
+        "timeStamping": true
+    }],
+    "invalid": []
+}
+
+

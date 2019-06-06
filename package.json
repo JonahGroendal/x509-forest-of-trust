@@ -33,8 +33,8 @@
   },
   "devDependencies": {
     "eth-ens-namehash": "^2.0.8",
+    "node-forge": "^0.8.4",
     "node-rsa": "^1.0.3",
-    "web3": "^1.0.0-beta.41",
-    "js-sha256": "^0.9.0"
+    "web3": "^1.0.0-beta.41"
   }
 }
