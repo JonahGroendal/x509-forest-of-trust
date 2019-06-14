@@ -39,7 +39,7 @@ contract X509ForestOfTrust is Ownable {
     uint8 pathLenConstraint;        // Maximum number of non-self-issued intermediate certs that may follow this
                                     // cert in a valid certification path.
     bool keyUsagePresent;
-    uint16 keyUsage;                // Value of KeyUsage bits. (E.g. 000000101 is 5)
+    uint16 keyUsage;                // Value of KeyUsage bits. (E.g. 5 is 000000101)
     bool extKeyUsagePresent;
     bytes32[] extKeyUsage;
     bool sxg;                       // canSignHttpExchanges extension is present.
@@ -110,6 +110,9 @@ contract X509ForestOfTrust is Ownable {
     node1 = cert.nextSiblingOf(node1);
     // Get public key and calculate certId from it
     certId = cert.keccakOfAllBytesAt(node1);
+    // Cert must not already exist
+    // Prevents duplicate references and owner from being overridden
+    require(certs[certId].validNotAfter == 0);
     // Fire event
     emit CertAdded(certId);
 
@@ -223,6 +226,8 @@ contract X509ForestOfTrust is Ownable {
     // bit in the key usage extension MUST NOT be asserted.
     if (!certificate.cA)
       require(certificate.keyUsage & 8 != 8, "cA boolean is not asserted and keyCertSign bit is asserted");
+
+    require(certificate.validNotAfter <= certs[certificate.parentId].validNotAfter);
   }
 
   /**
@@ -246,7 +251,7 @@ contract X509ForestOfTrust is Ownable {
    * @param sigAlg The OID of the algorithm used to sign `signature`
    */
   function proveOwnership(bytes calldata pubKey, bytes calldata signature, uint blockNumber, bytes32 sigAlg)
-  external returns (bool)
+  external
   {
     bytes32 certId = keccak256(pubKey);
     bytes memory message = abi.encodePacked(msg.sender, blockhash(blockNumber));

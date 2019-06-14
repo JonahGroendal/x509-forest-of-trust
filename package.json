@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/JonahGroendal/x509-forest-of-trust#readme",
   "dependencies": {
+    "@ensdomains/ens": "github:JonahGroendal/ens",
     "asn1-decode": "github:JonahGroendal/asn1-decode",
     "ens-namehash": "github:JonahGroendal/ens-namehash",
     "ethereum-datetime": "github:JonahGroendal/ethereum-datetime",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "eth-ens-namehash": "^2.0.8",
+    "ganache-cli": "^6.4.3",
     "node-forge": "^0.8.4",
     "node-rsa": "^1.0.3",
     "web3": "^1.0.0-beta.41"
