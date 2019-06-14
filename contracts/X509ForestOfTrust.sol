@@ -267,12 +267,16 @@ contract X509ForestOfTrust is Ownable {
     certs[certId].owner = msg.sender;
   }
 
-  function rootOf(bytes32 certId)external view returns (bytes32) {
+  function rootOf(bytes32 certId) external view returns (bytes32, bool) {
+    bool uncheckedCriticalExtensionInPath;
     bytes32 id = certId;
-    while (id != certs[id].parentId) {
+    do {
+      if (certs[id].uncheckedCriticalExtension)
+        uncheckedCriticalExtensionInPath = true;
       id = certs[id].parentId;
-    }
-    return id;
+    } while (id != certs[id].parentId);
+
+    return (id, uncheckedCriticalExtensionInPath);
   }
 
   function owner(bytes32 certId) external view returns (address) {
