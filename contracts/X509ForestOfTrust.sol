@@ -28,6 +28,16 @@ contract X509ForestOfTrust is Ownable {
     dateTime = DateTime(_dateTime);
   }
 
+  struct KeyUsage {
+    bool critical;
+    bool present;
+    uint16 bits;              // Value of KeyUsage bits. (E.g. 5 is 000000101)
+  }
+  struct ExtKeyUsage {
+    bool critical;
+    bool present;
+    bytes32[] oids;
+  }
   struct Certificate {
     address owner;
     bytes32 parentId;
@@ -35,19 +45,18 @@ contract X509ForestOfTrust is Ownable {
     uint160 serialNumber;
     uint40 validNotBefore;
     uint40 validNotAfter;
-    bool cA;                        // Whether the certified public key may be used to verify certificate signatures.
-    uint8 pathLenConstraint;        // Maximum number of non-self-issued intermediate certs that may follow this
-                                    // cert in a valid certification path.
-    bool keyUsagePresent;
-    uint16 keyUsage;                // Value of KeyUsage bits. (E.g. 5 is 000000101)
-    bool extKeyUsagePresent;
-    bytes32[] extKeyUsage;
-    bool sxg;                       // canSignHttpExchanges extension is present.
-    bool uncheckedCriticalExtension;// If true, further validation is needed. Use extId to save gas.
-    bytes32 extId;                  // keccak256 of extensions field for further validation.
+    bool cA;                  // Whether the certified public key may be used to verify certificate signatures.
+    uint8 pathLenConstraint;  // Maximum number of non-self-issued intermediate certs that may follow this
+                              // cert in a valid certification path.
+    KeyUsage keyUsage;
+    ExtKeyUsage extKeyUsage;
+    bool sxg;                 // canSignHttpExchanges extension is present.
+    bytes32 extId;            // keccak256 of extensions field for further validation.
+                              // Equal to 0x0 unless a critical extension was found but not parsed.
+                              // This should always be checked on leaf certificates
   }
 
-  mapping (bytes32 => Certificate) public  certs;     // certId => cert  (certId is keccak256(pubKey))
+  mapping (bytes32 => Certificate) private certs;     // certId => cert  (certId is keccak256(pubKey))
   mapping (bytes32 => Algorithm)   private algs;      // algorithm oid bytes => signature verification contract
   mapping (bytes32 => bytes32[])   public  toCertIds; // ensNamehash(subjectAltName) => certId
   mapping (bytes32 => bytes32)     public  toCertId;  // sha256 fingerprint => certId
@@ -129,8 +138,6 @@ contract X509ForestOfTrust is Ownable {
 
     // Parse extensions
     if (cert[NodePtr.ixs(node1)] == 0xa3) {
-      // Save hash of extensions
-      certificate.extId = cert.keccakOfAllBytesAt(node1);
       node1 = cert.firstChildOf(node1);
       node2 = cert.firstChildOf(node1);
       bytes10 oid;
@@ -177,13 +184,15 @@ contract X509ForestOfTrust is Ownable {
           }
         }
         else if (oid == OID_KEY_USAGE) {
-          certificate.keyUsagePresent = true;
+          certificate.keyUsage.present = true;
+          certificate.keyUsage.critical = isCritical;
           node3 = cert.rootOfOctetStringAt(node3);
           bytes3 v = bytes3(cert.bytes32At(node3)); // The encoded bitstring value
-          certificate.keyUsage = ((uint16(uint8(v[1])) << 8) + uint16(uint8(v[2]))) >> 7;
+          certificate.keyUsage.bits = ((uint16(uint8(v[1])) << 8) + uint16(uint8(v[2]))) >> 7;
         }
         else if (oid == OID_EXTENDED_KEY_USAGE) {
-          certificate.extKeyUsagePresent = true;
+          certificate.extKeyUsage.present = true;
+          certificate.extKeyUsage.critical = isCritical;
           node3 = cert.rootOfOctetStringAt(node3);
           node4 = cert.firstChildOf(node3);
           uint len;
@@ -197,7 +206,7 @@ contract X509ForestOfTrust is Ownable {
             oids[i] = cert.bytes32At(node4);
             node4 = cert.nextSiblingOf(node4);
           }
-          certificate.extKeyUsage = oids;
+          certificate.extKeyUsage.oids = oids;
         }
         else if (oid == OID_CAN_SIGN_HTTP_EXCHANGES) {
           certificate.sxg = true;
@@ -208,8 +217,9 @@ contract X509ForestOfTrust is Ownable {
         }
         else if (isCritical) {
           // Note: unrecognized critical extensions are allowed.
-          // Further validation of certificate is needed.
-          certificate.uncheckedCriticalExtension = true;
+          // Further validation of certificate is needed if extId != bytes32(0).
+          // Save hash of extensions
+          certificate.extId = cert.keccakOfAllBytesAt(node1);
         }
         node2 = cert.nextSiblingOf(node2);
       }
@@ -225,7 +235,7 @@ contract X509ForestOfTrust is Ownable {
     // RFC 5280: If the cA boolean is not asserted, then the keyCertSign
     // bit in the key usage extension MUST NOT be asserted.
     if (!certificate.cA)
-      require(certificate.keyUsage & 8 != 8, "cA boolean is not asserted and keyCertSign bit is asserted");
+      require(certificate.keyUsage.bits & 8 != 8, "cA boolean is not asserted and keyCertSign bit is asserted");
 
     require(certificate.validNotAfter <= certs[certificate.parentId].validNotAfter);
   }
@@ -267,16 +277,12 @@ contract X509ForestOfTrust is Ownable {
     certs[certId].owner = msg.sender;
   }
 
-  function rootOf(bytes32 certId) external view returns (bytes32, bool) {
-    bool uncheckedCriticalExtensionInPath;
+  function rootOf(bytes32 certId) external view returns (bytes32) {
     bytes32 id = certId;
-    do {
-      if (certs[id].uncheckedCriticalExtension)
-        uncheckedCriticalExtensionInPath = true;
+    while (id != certs[id].parentId) {
       id = certs[id].parentId;
-    } while (id != certs[id].parentId);
-
-    return (id, uncheckedCriticalExtensionInPath);
+    }
+    return id;
   }
 
   function owner(bytes32 certId) external view returns (address) {
@@ -287,12 +293,12 @@ contract X509ForestOfTrust is Ownable {
     return certs[certId].parentId;
   }
 
-  function serialNumber(bytes32 certId) external view returns (uint160) {
-    return certs[certId].serialNumber;
-  }
-
   function timestamp(bytes32 certId) external view returns (uint40) {
     return certs[certId].timestamp;
+  }
+
+  function serialNumber(bytes32 certId) external view returns (uint160) {
+    return certs[certId].serialNumber;
   }
 
   function validNotBefore(bytes32 certId) external view returns (uint40) {
@@ -307,34 +313,38 @@ contract X509ForestOfTrust is Ownable {
     return certs[certId].sxg;
   }
 
-  function pathLenConstraint(bytes32 certId) external view returns (uint8) {
-    return certs[certId].pathLenConstraint;
-  }
-
-  function cA(bytes32 certId) external view returns (bool) {
-    return certs[certId].cA;
+  function basicConstraints(bytes32 certId) external view returns (bool, uint8) {
+    return (certs[certId].cA, certs[certId].pathLenConstraint);
   }
 
   function keyUsage(bytes32 certId) external view returns (bool, bool[9] memory) {
+    KeyUsage memory _keyUsage = certs[certId].keyUsage;
     uint16 mask = 256;
     bool[9] memory flags;
-    uint16 bits = certs[certId].keyUsage;
-    bool isPresent = certs[certId].keyUsagePresent;
-    if (isPresent) {
+    if (_keyUsage.present) {
       for (uint i; i<9; i++) {
-        flags[i] = (bits & mask == mask);
+        flags[i] = (_keyUsage.bits & mask == mask);
         mask = mask >> 1;
       }
     }
-    return (isPresent, flags);
+    return (_keyUsage.present, flags);
+  }
+
+  function keyUsageCritical(bytes32 certId) external view returns (bool) {
+    return certs[certId].keyUsage.critical;
   }
 
   function extKeyUsage(bytes32 certId) external view returns (bool, bytes32[] memory) {
-    return (certs[certId].extKeyUsagePresent, certs[certId].extKeyUsage);
+    ExtKeyUsage memory _extKeyUsage = certs[certId].extKeyUsage;
+    return (_extKeyUsage.present, _extKeyUsage.oids);
   }
 
-  function uncheckedCriticalExtension(bytes32 certId) external view returns (bool) {
-    return certs[certId].uncheckedCriticalExtension;
+  function extKeyUsageCritical(bytes32 certId) external view returns (bool) {
+    return certs[certId].extKeyUsage.critical;
+  }
+
+  function unparsedCriticalExtensionPresent(bytes32 certId) external view returns (bool) {
+    return (certs[certId].extId != bytes32(0));
   }
 
   function extId(bytes32 certId) external view returns (bytes32) {

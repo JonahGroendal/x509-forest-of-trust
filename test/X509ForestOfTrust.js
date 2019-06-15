@@ -30,21 +30,24 @@ contract('X509ForestOfTrust', (accounts) => {
 
     const result = await instance.addCert(certBytes, pubKeyBytes)
     console.log("      gas: addCert(): " + result.receipt.gasUsed)
-    
+
     const fingerprint = forge.md.sha256.create().update(forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes()).digest().toHex();
     const expectedId = web3.utils.sha3(pubKeyBytes)
     const validNotAfter = fs.readFileSync(__dirname + '/certs/validNotAfter.txt').toString()
     const actualKeyUsage = await instance.keyUsage(expectedId);
     const assertedKeyUsageBits = Object.keys(extensions.root.filter(ex => ex.name == "keyUsage")[0]).filter(v => v !== "name")
+    const bc = await instance.basicConstraints(expectedId)
+    const cA = bc[0]
+    const pathLenConstraint = bc[1]
 
     assert.equal(await instance.toCertId('0x' + fingerprint), expectedId, "sha256 fingerprint doesn't map to certId")
-    assert.isTrue(await instance.cA(expectedId))
-    assert.equal((await instance.pathLenConstraint(expectedId)).toString(), "255")
+    assert.isTrue(cA)
+    assert.equal(pathLenConstraint.toString(), "255")
     assert.equal((await instance.serialNumber(expectedId)).toString(), "1")
     assert.equal(await instance.parentId(expectedId), expectedId)
     assert.isFalse(await instance.sxg(expectedId))
     assert.equal(await instance.owner(expectedId), "0x0000000000000000000000000000000000000000")
-    assert.isFalse(await instance.uncheckedCriticalExtension(expectedId))
+    assert.isFalse(await instance.unparsedCriticalExtensionPresent(expectedId))
     assert.equal((await instance.validNotAfter(expectedId)).toString(), validNotAfter.slice(0, -3))
     assert.equal(actualKeyUsage[0], assertedKeyUsageBits.length > 0, "key usage is incorrectly marked as present")
     keyUsageBitNames.forEach((name, i) => {
@@ -66,21 +69,24 @@ contract('X509ForestOfTrust', (accounts) => {
 
     const result = await instance.addCert(certBytes, parentPubKeyBytes)
     console.log("      gas: addCert(): " + result.receipt.gasUsed)
-    
+
     const fingerprint = forge.md.sha256.create().update(forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes()).digest().toHex();
     const expectedId = web3.utils.sha3(pubKeyBytes)
     const validNotAfter = fs.readFileSync(__dirname + '/certs/validNotAfter.txt').toString()
     const actualKeyUsage = await instance.keyUsage(expectedId);
     const assertedKeyUsageBits = Object.keys(extensions.intermediate.filter(ex => ex.name == "keyUsage")[0]).filter(v => v !== "name")
+    const bc = await instance.basicConstraints(expectedId)
+    const cA = bc[0]
+    const pathLenConstraint = bc[1]
 
     assert.equal(await instance.toCertId('0x' + fingerprint), expectedId, "sha256 fingerprint doesn't map to certId")
-    assert.isTrue(await instance.cA(expectedId))
-    assert.equal((await instance.pathLenConstraint(expectedId)).toString(), "0")
+    assert.isTrue(cA)
+    assert.equal(pathLenConstraint.toString(), "0")
     assert.equal((await instance.serialNumber(expectedId)).toString(), "1")
     assert.equal(await instance.parentId(expectedId), web3.utils.sha3(parentPubKeyBytes))
     assert.isFalse(await instance.sxg(expectedId))
     assert.equal(await instance.owner(expectedId), "0x0000000000000000000000000000000000000000")
-    assert.isFalse(await instance.uncheckedCriticalExtension(expectedId))
+    assert.isFalse(await instance.unparsedCriticalExtensionPresent(expectedId))
     assert.equal((await instance.validNotAfter(expectedId)).toString(), validNotAfter.slice(0, -3))
     assert.equal(actualKeyUsage[0], assertedKeyUsageBits.length > 0, "key usage is incorrectly marked as present")
     keyUsageBitNames.forEach((name, i) => {
@@ -102,7 +108,7 @@ contract('X509ForestOfTrust', (accounts) => {
 
     const result = await instance.addCert(certBytes, parentPubKeyBytes)
     console.log("      gas: addCert(): " + result.receipt.gasUsed)
-    
+
     const fingerprint = forge.md.sha256.create().update(forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes()).digest().toHex();
     const expectedId = web3.utils.sha3(pubKeyBytes)
     const validNotAfter = fs.readFileSync(__dirname + '/certs/validNotAfter.txt').toString()
@@ -110,6 +116,9 @@ contract('X509ForestOfTrust', (accounts) => {
     const assertedKeyUsageBits = Object.keys(extensions.leaf.filter(ex => ex.name == "keyUsage")[0]).filter(v => v !== "name")
     const expectedExtKeyUsageNames = Object.keys(extensions.leaf.filter(ex => ex.name == "extKeyUsage")[0]).filter(v => v !== "name")
     const actualExtKeyUsage = await instance.extKeyUsage(expectedId)
+    const bc = await instance.basicConstraints(expectedId)
+    const cA = bc[0]
+    const pathLenConstraint = bc[1]
 
     for (let name of extensions.leaf.filter(ex => ex.name == "subjectAltName")[0].altNames) {
       assert.equal((await instance.toCertIdsLength(namehash.hash(name.value))).toString(), "1")
@@ -120,13 +129,13 @@ contract('X509ForestOfTrust', (accounts) => {
       )
     }
     assert.equal(await instance.toCertId('0x' + fingerprint), expectedId, "sha256 fingerprint doesn't map to certId")
-    assert.isFalse(await instance.cA(expectedId))
-    assert.equal((await instance.pathLenConstraint(expectedId)).toString(), "0")
+    assert.isFalse(cA)
+    assert.equal(pathLenConstraint.toString(), "0")
     assert.equal((await instance.serialNumber(expectedId)).toString(), "1")
     assert.equal(await instance.parentId(expectedId), web3.utils.sha3(parentPubKeyBytes))
     assert.isFalse(await instance.sxg(expectedId))
     assert.equal(await instance.owner(expectedId), "0x0000000000000000000000000000000000000000")
-    assert.isFalse(await instance.uncheckedCriticalExtension(expectedId))
+    assert.isFalse(await instance.unparsedCriticalExtensionPresent(expectedId))
     assert.equal((await instance.validNotAfter(expectedId)).toString(), validNotAfter.slice(0, -3))
     assert.equal(actualKeyUsage[0], assertedKeyUsageBits.length > 0, "key usage is incorrectly marked as present")
     keyUsageBitNames.forEach((name, i) => {
@@ -152,7 +161,7 @@ contract('X509ForestOfTrust', (accounts) => {
     }
     assert.isTrue(false, "Added an invalid cert")
   })
-  
+
   // Test signThis() and proveOwnership()
   it("should prove ownership of leaf Certificate", async () => {
     // Get challenge
