@@ -236,8 +236,6 @@ contract X509ForestOfTrust is Ownable {
     // bit in the key usage extension MUST NOT be asserted.
     if (!certificate.cA)
       require(certificate.keyUsage.bits & 8 != 8, "cA boolean is not asserted and keyCertSign bit is asserted");
-
-    require(certificate.validNotAfter <= certs[certificate.parentId].validNotAfter);
   }
 
   /**
