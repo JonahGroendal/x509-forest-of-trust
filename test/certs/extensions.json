@@ -15,6 +15,7 @@
         ]
     },{
         "name": "keyUsage",
+        "critical": true,
         "digitalSignature": true,
         "keyEncipherment": true,
         "decipherOnly": true
@@ -25,8 +26,8 @@
         "codeSigning": true,
         "emailProtection": true,
         "timeStamping": true
-    }],
+    }, {
+      "name": "subjectKeyIdentifier"
+      }],
     "invalid": []
 }
-
-

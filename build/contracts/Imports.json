@@ -12,14 +12,14 @@
     "absolutePath": "/home/jonah/x509-forest-of-trust/contracts/imports.sol",
     "exportedSymbols": {
       "Imports": [
-        1729
+        1741
       ]
     },
-    "id": 1730,
+    "id": 1742,
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 1727,
+        "id": 1739,
         "literals": [
           "solidity",
           "^",
@@ -32,10 +32,10 @@
       {
         "absolutePath": "sig-verify-algs/contracts/RsaSha256Algorithm.sol",
         "file": "sig-verify-algs/contracts/RsaSha256Algorithm.sol",
-        "id": 1728,
+        "id": 1740,
         "nodeType": "ImportDirective",
-        "scope": 1730,
-        "sourceUnit": 4099,
+        "scope": 1742,
+        "sourceUnit": 4111,
         "src": "26:58:3",
         "symbolAliases": [],
         "unitAlias": ""
@@ -46,14 +46,14 @@
         "contractKind": "interface",
         "documentation": null,
         "fullyImplemented": true,
-        "id": 1729,
+        "id": 1741,
         "linearizedBaseContracts": [
-          1729
+          1741
         ],
         "name": "Imports",
         "nodeType": "ContractDefinition",
         "nodes": [],
-        "scope": 1730,
+        "scope": 1742,
         "src": "86:20:3"
       }
     ],
@@ -63,14 +63,14 @@
     "absolutePath": "/home/jonah/x509-forest-of-trust/contracts/imports.sol",
     "exportedSymbols": {
       "Imports": [
-        1729
+        1741
       ]
     },
-    "id": 1730,
+    "id": 1742,
     "nodeType": "SourceUnit",
     "nodes": [
       {
-        "id": 1727,
+        "id": 1739,
         "literals": [
           "solidity",
           "^",
@@ -83,10 +83,10 @@
       {
         "absolutePath": "sig-verify-algs/contracts/RsaSha256Algorithm.sol",
         "file": "sig-verify-algs/contracts/RsaSha256Algorithm.sol",
-        "id": 1728,
+        "id": 1740,
         "nodeType": "ImportDirective",
-        "scope": 1730,
-        "sourceUnit": 4099,
+        "scope": 1742,
+        "sourceUnit": 4111,
         "src": "26:58:3",
         "symbolAliases": [],
         "unitAlias": ""
@@ -97,14 +97,14 @@
         "contractKind": "interface",
         "documentation": null,
         "fullyImplemented": true,
-        "id": 1729,
+        "id": 1741,
         "linearizedBaseContracts": [
-          1729
+          1741
         ],
         "name": "Imports",
         "nodeType": "ContractDefinition",
         "nodes": [],
-        "scope": 1730,
+        "scope": 1742,
         "src": "86:20:3"
       }
     ],
@@ -116,7 +116,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.9",
-  "updatedAt": "2019-06-17T03:03:26.493Z",
+  "updatedAt": "2019-06-18T04:44:54.511Z",
   "devdoc": {
     "methods": {}
   },

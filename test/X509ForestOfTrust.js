@@ -137,7 +137,9 @@ contract('X509ForestOfTrust', (accounts) => {
     assert.equal(await instance.owner(expectedId), "0x0000000000000000000000000000000000000000")
     assert.isFalse(await instance.unparsedCriticalExtensionPresent(expectedId))
     assert.equal((await instance.validNotAfter(expectedId)).toString(), validNotAfter.slice(0, -3))
+    assert.isTrue(await instance.keyUsageCritical(expectedId))
     assert.equal(actualKeyUsage[0], assertedKeyUsageBits.length > 0, "key usage is incorrectly marked as present")
+    assert.isFalse(await instance.extKeyUsageCritical(expectedId))
     keyUsageBitNames.forEach((name, i) => {
       assert.equal(actualKeyUsage[1][i], assertedKeyUsageBits.includes(name), "key usage flags parsed incorrectly")
     })

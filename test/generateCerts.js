@@ -3,11 +3,11 @@
 
 const forge = require('node-forge')
 const fs = require('fs')
-const extensions = require('./extensions.json')
+const extensions = require('./certs/extensions.json')
 
 let expiration
 try {
-    expiration = fs.readFileSync(__dirname + '/validNotAfter.txt').toString()
+    expiration = fs.readFileSync(__dirname + '/certs/validNotAfter.txt').toString()
 } catch (error) {
     if (!error.message.includes("no such file or directory")) throw error
 }
@@ -19,13 +19,13 @@ if (!expiration || Date.now() > parseInt(expiration) - 10000) {
     let expDate = new Date(now)
     expDate.setFullYear(expDate.getFullYear() + 1)
     expiration = expDate.getTime()
-    fs.writeFileSync(__dirname + '/validNotAfter.txt', expiration.toString())
-    
+    fs.writeFileSync(__dirname + '/certs/validNotAfter.txt', expiration.toString())
+
     let rootKeys = forge.pki.rsa.generateKeyPair(2048);
     let intermediateKeys = forge.pki.rsa.generateKeyPair(2048);
     let leafKeys = forge.pki.rsa.generateKeyPair(2048);
     let invalidKeys = forge.pki.rsa.generateKeyPair(2048);
-    
+
     const rootPemCert = generateCert(now, expiration, extensions.root, rootKeys.publicKey, rootKeys.privateKey);
     const intermediatePemCert = generateCert(now, expiration, extensions.intermediate, intermediateKeys.publicKey, rootKeys.privateKey);
     const leafPemCert = generateCert(now, expiration, extensions.leaf, leafKeys.publicKey, intermediateKeys.privateKey);
@@ -39,15 +39,15 @@ if (!expiration || Date.now() > parseInt(expiration) - 10000) {
     const invalidPemPubKey = forge.pki.publicKeyToPem(invalidKeys.publicKey)
 
     // Write certificates and keys to file
-    fs.writeFileSync(__dirname + '/root.pem', rootPemCert)
-    fs.writeFileSync(__dirname + '/intermediate.pem', intermediatePemCert)
-    fs.writeFileSync(__dirname + '/leaf.pem', leafPemCert)
-    fs.writeFileSync(__dirname + '/invalid.pem', invalidPemCert)
-    fs.writeFileSync(__dirname + '/rootPubKey.pem', rootPemPubKey)
-    fs.writeFileSync(__dirname + '/intermediatePubKey.pem', intermediatePemPubKey)
-    fs.writeFileSync(__dirname + '/leafPubKey.pem', leafPemPubKey)
-    fs.writeFileSync(__dirname + '/leafPrivKey.pem', leafPemPrivKey)
-    fs.writeFileSync(__dirname + '/invalidPubKey.pem', invalidPemPubKey)
+    fs.writeFileSync(__dirname + '/certs/root.pem', rootPemCert)
+    fs.writeFileSync(__dirname + '/certs/intermediate.pem', intermediatePemCert)
+    fs.writeFileSync(__dirname + '/certs/leaf.pem', leafPemCert)
+    fs.writeFileSync(__dirname + '/certs/invalid.pem', invalidPemCert)
+    fs.writeFileSync(__dirname + '/certs/rootPubKey.pem', rootPemPubKey)
+    fs.writeFileSync(__dirname + '/certs/intermediatePubKey.pem', intermediatePemPubKey)
+    fs.writeFileSync(__dirname + '/certs/leafPubKey.pem', leafPemPubKey)
+    fs.writeFileSync(__dirname + '/certs/leafPrivKey.pem', leafPemPrivKey)
+    fs.writeFileSync(__dirname + '/certs/invalidPubKey.pem', invalidPemPubKey)
 }
 
 function generateCert(now, expiration, extensions, subjectPubKey, authorityPrivKey) {

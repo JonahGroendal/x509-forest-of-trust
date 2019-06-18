@@ -147,6 +147,7 @@ contract X509ForestOfTrust is Ownable {
         oid = bytes10(cert.bytes32At(node3)); // Extension oid
         node3 = cert.nextSiblingOf(node3);
         // Check if extension is critical
+        isCritical = false;
         if (cert[NodePtr.ixs(node3)] == 0x01) { // If type is bool
           if (cert[NodePtr.ixf(node3)] != 0x00) // If not false
             isCritical = true;
@@ -164,21 +165,23 @@ contract X509ForestOfTrust is Ownable {
             node4 = cert.nextSiblingOf(node4);
           }
         }
-        else if (oid == OID_BASIC_CONSTRAINTS && isCritical) {
-          // Check if cert can sign other certs
-          node3 = cert.rootOfOctetStringAt(node3);
-          node4 = cert.firstChildOf(node3);
-          // If sequence (node3) is not empty
-          if (Asn1Decode.isChildOf(node4, node3)) {
-            // If value == true
-            if (cert[NodePtr.ixf(node4)] != 0x00) {
-              certificate.cA = true;
-              node4 = cert.nextSiblingOf(node4);
-              if (Asn1Decode.isChildOf(node4, node3)) {
-                certificate.pathLenConstraint = uint8(cert.uintAt(node4));
-              }
-              else {
-                certificate.pathLenConstraint = uint8(-1);
+        else if (oid == OID_BASIC_CONSTRAINTS) {
+          if (isCritical) {
+            // Check if cert can sign other certs
+            node3 = cert.rootOfOctetStringAt(node3);
+            node4 = cert.firstChildOf(node3);
+            // If sequence (node3) is not empty
+            if (Asn1Decode.isChildOf(node4, node3)) {
+              // If value == true
+              if (cert[NodePtr.ixf(node4)] != 0x00) {
+                certificate.cA = true;
+                node4 = cert.nextSiblingOf(node4);
+                if (Asn1Decode.isChildOf(node4, node3)) {
+                  certificate.pathLenConstraint = uint8(cert.uintAt(node4));
+                }
+                else {
+                  certificate.pathLenConstraint = uint8(-1);
+                }
               }
             }
           }
@@ -215,7 +218,7 @@ contract X509ForestOfTrust is Ownable {
           // Name constraints not allowed.
           require(false, "Name constraints extension not supported");
         }
-        else if (isCritical) {
+        else if (isCritical && certificate.extId == bytes32(0)) {
           // Note: unrecognized critical extensions are allowed.
           // Further validation of certificate is needed if extId != bytes32(0).
           // Save hash of extensions
