@@ -4744,12 +4744,12 @@
     "42": {
       "events": {},
       "links": {},
-      "address": "0x56d3a6D89257e15D5e2EE840fD3a5EF05c1c9214",
-      "transactionHash": "0xf6c29fd74c833eef5f4b9dfc1846f5ef0af12b2c9ee230bbe88c45ca727b1ef4"
+      "address": "0xbA1696B8d94479f24B1175d366d31A18A4Ee2B94",
+      "transactionHash": "0x45742a2987d41cbca95e3eca6174239f1877b8029d937816a9ebe560f18e8924"
     }
   },
   "schemaVersion": "3.0.9",
-  "updatedAt": "2019-06-18T04:45:53.080Z",
+  "updatedAt": "2019-07-13T22:12:21.221Z",
   "devdoc": {
     "methods": {}
   },
