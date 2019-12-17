@@ -29,14 +29,14 @@
     "asn1-decode": "github:JonahGroendal/asn1-decode",
     "ens-namehash": "github:JonahGroendal/ens-namehash",
     "ethereum-datetime": "github:JonahGroendal/ethereum-datetime",
+    "node-forge": "^0.9.1",
+    "node-rsa": "^1.0.7",
     "sig-verify-algs": "github:JonahGroendal/sig-verify-algs.git",
     "truffle-hdwallet-provider": "^1.0.8"
   },
   "devDependencies": {
     "eth-ens-namehash": "^2.0.8",
     "ganache-cli": "^6.4.3",
-    "node-forge": "^0.8.4",
-    "node-rsa": "^1.0.3",
     "web3": "^1.0.0-beta.41"
   }
 }
