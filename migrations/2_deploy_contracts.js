@@ -1,16 +1,24 @@
-// var Asn1Decode = artifacts.require("asn1-decode/Asn1Decode");
-var RsaSha256Algorithm = artifacts.require("sig-verify-algs/RsaSha256Algorithm");
-var X509ForestOfTrust = artifacts.require("X509ForestOfTrust");
-var ENSNamehash = artifacts.require("ens-namehash/ENSNamehash");
-var DateTime = artifacts.require("ethereum-datetime/DateTime");
+let RsaSha256Algorithm = artifacts.require("sig-verify-algs/RsaSha256Algorithm");
+let RsaSha256AlgorithmObj = require("sig-verify-algs/build/contracts/RsaSha256Algorithm.json")
+let X509ForestOfTrust = artifacts.require("X509ForestOfTrust");
+let DateTime = artifacts.require("ethereum-datetime/DateTime");
+
+const networkIds = {
+  'kovan': 42,
+  'kovan-fork': 42
+}
 
 module.exports = function(deployer, network) {
-  // deployer.deploy(Asn1Decode, { overwrite: false });
-  // deployer.link(Asn1Decode, RsaSha256Algorithm);
-  // deployer.link(Asn1Decode, X509ForestOfTrust);
-  deployer.deploy(ENSNamehash, { overwrite: false });
-  deployer.link(ENSNamehash, X509ForestOfTrust);
-  deployer.deploy(RsaSha256Algorithm, { overwrite: false })
-  .then(() => deployer.deploy(DateTime, { overwrite: false }))
-  .then(() => deployer.deploy(X509ForestOfTrust, RsaSha256Algorithm.address, DateTime.address, { gas: 5000000, overwrite: false }));
+  if (network === 'development') {
+    deployer.deploy(RsaSha256Algorithm)
+    .then(() => deployer.deploy(DateTime))
+    .then(() => deployer.deploy(X509ForestOfTrust, RsaSha256Algorithm.address, DateTime.address));
+  } else {
+    if (!networkIds[network]) {
+      throw new Error('Please set the network ID for '.concat(network))
+    }
+    const rsaSha256AlgorithmAddr = RsaSha256AlgorithmObj.networks[networkIds[network]].address
+    deployer.deploy(DateTime)
+    .then(() => deployer.deploy(X509ForestOfTrust, rsaSha256AlgorithmAddr, DateTime.address));
+  }
 };

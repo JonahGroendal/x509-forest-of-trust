@@ -17,7 +17,7 @@ contract('API', accounts => {
 
     await api.addCertAndProveOwnership(accounts[0], pemCertChain, pemPrivKeyLeaf)
 
-    const instance = await X509Forest.deployed()
+    const instance = await X509Forest.at(Artifact.networks[chainId].address)
     const pubKey = forge.pki.publicKeyFromPem(pemPubKeyLeaf)
     const pubKeyBytes = '0x' + forge.asn1.toDer(forge.pki.publicKeyToAsn1(pubKey)).toHex()
     const expectedId = web3.utils.sha3(pubKeyBytes)

@@ -2,8 +2,7 @@ pragma solidity  ^0.5.2;
 
 import "./Ownable.sol";
 import "asn1-decode/contracts/Asn1Decode.sol";
-//import "solidity-bytes-utils/contracts/BytesUtils.sol";
-import "sig-verify-algs/contracts/Algorithm.sol";
+import "@ensdomains/dnssec-oracle/contracts/algorithms/Algorithm.sol";
 import "ens-namehash/contracts/ENSNamehash.sol";
 import "ethereum-datetime/contracts/DateTime.sol";
 
@@ -63,7 +62,7 @@ contract X509ForestOfTrust is Ownable {
   DateTime dateTime;                                  // For dateTime conversion
 
   event CertAdded(bytes32);
-  event CertClaimed(bytes32);
+  event CertClaimed(bytes32, address);
   event AlgSet(bytes32, address);
 
   /**
@@ -267,7 +266,7 @@ contract X509ForestOfTrust is Ownable {
     bytes32 certId = keccak256(pubKey);
     bytes memory message = abi.encodePacked(msg.sender, blockhash(blockNumber));
 
-    emit CertClaimed(certId);
+    emit CertClaimed(certId, msg.sender);
 
     // Only accept proof if it's less than 256 blocks old
     // This is the most time I can give since blockhash() can only return the 256 most recent

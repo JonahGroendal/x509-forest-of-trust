@@ -1,4 +1,4 @@
-const HDWalletProvider = require('truffle-hdwallet-provider');
+const HDWalletProvider = require('@truffle/hdwallet-provider');
 const fs = require('fs');
 
 const infuraKey = "48899b10645a48e189e345be4be19ece";
@@ -21,7 +21,12 @@ module.exports = {
       network_id: "4",
     },
     kovan: {
-      provider: () => new HDWalletProvider(privateKeys, `https://kovan.infura.io/v3/${infuraKey}`, 0, 5),
+      provider: () => new HDWalletProvider({
+        privateKeys,
+        providerOrUrl: `https://kovan.infura.io/v3/${infuraKey}`,
+        addressIndex: 0,
+        numAddresses: 5
+      }),
       network_id: 42,
       // gas: 5500000,        // Ropsten has a lower block limit than mainnet
       // confirmations: 2,    // # of confs to wait between deployments. (default: 0)

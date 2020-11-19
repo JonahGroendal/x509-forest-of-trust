@@ -8,7 +8,9 @@
   "scripts": {
     "compile": "truffle compile",
     "migrate": "truffle migrate",
-    "test": "echo \"\\nnote: CONTRACTS MUST BE REDEPLOYED BETWEEN TESTS or else tests will fail\\n\" && truffle test"
+    "migrate-kovan": "truffle migrate --network kovan",
+    "test": "echo \"\\nnote: CONTRACTS MUST BE REDEPLOYED BETWEEN TESTS or else tests will fail\\n\" && truffle test",
+    "generate-keys": "node generateKeys.js"
   },
   "repository": {
     "type": "git",
@@ -33,10 +35,10 @@
     "ethereum-datetime": "github:JonahGroendal/ethereum-datetime",
     "node-forge": "^0.9.1",
     "node-rsa": "^1.0.7",
-    "sig-verify-algs": "github:JonahGroendal/sig-verify-algs.git",
-    "truffle-hdwallet-provider": "^1.0.8"
+    "sig-verify-algs": "github:JonahGroendal/sig-verify-algs.git"
   },
   "devDependencies": {
+    "@truffle/hdwallet-provider": "^1.2.0",
     "eth-ens-namehash": "^2.0.8",
     "ganache-cli": "^6.4.3",
     "truffle": "^5.1.53",
